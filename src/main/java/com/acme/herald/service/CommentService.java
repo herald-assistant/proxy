@@ -4,9 +4,9 @@ package com.acme.herald.service;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.CommentDtos;
 import com.acme.herald.provider.JiraProvider;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.util.*;
@@ -20,7 +20,7 @@ public class CommentService {
     private static final String PROPERTY_KEY = "herald.comments.v1";
 
     private final JiraProvider jira;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     // ────────── PUBLIC API (używane przez CommentController) ──────────
 
@@ -301,7 +301,7 @@ public class CommentService {
             Map<String, Object> resp = jira.getIssueProperty(issueKey, PROPERTY_KEY);
             Object val = resp.get("value");
             if (val != null) {
-                return objectMapper.convertValue(val, CommentDtos.PropertyValue.class);
+                return jsonMapper.convertValue(val, CommentDtos.PropertyValue.class);
             }
         } catch (Exception ignored) {}
         return new CommentDtos.PropertyValue(List.of());

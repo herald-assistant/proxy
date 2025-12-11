@@ -91,6 +91,18 @@ services:
       # współdzielony "shared home" klastra (dla wielu nodów)
       - confluenceshared:/var/atlassian/application-data/shared-home
 
+  # manual WAR deployment for POC
+  tomcat:
+    build:
+      context: ./tomcat
+    container_name: tomcat-manual
+    ports:
+      - "8081:8080"
+    environment:
+      CATALINA_OPTS: "-Xms512m -Xmx1024m"
+      JIRA_BASE_URL: "http://jira:8080"
+    restart: unless-stopped
+
 volumes:
   pgdata_jira:
   jiradata:

@@ -14,6 +14,7 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+
 herald:
   auth:
     cookie-name: herald_auth
@@ -26,13 +27,9 @@ llm:
     baseUrl: https://api.openai.com/v1/chat/completions
 
 jira:
-  baseUrl: "http://localhost:8080"  # lokalna Jira w Dockerze
+  baseUrl: ${JIRA_BASE_URL:http://localhost:8080}
   projectKey: "HRLD"
   apiVersion: "2"                   # "2" (Server/DC) lub "3" (Cloud)
-  auth:
-    mode: "pat"                   # basic | pat | oauth
-    username: "svc_herald"
-    token: "MjI0ODc0NjAwOTk4OnqTR7KxkTYAyJbMc/ApVr0NMT7z"
 
   issueTypes:
     epic: "Epic"
@@ -42,7 +39,7 @@ jira:
 
   # ── MAPOWANIE PÓL (Twoje ID) ─────────────────────────────────────────────
   fields:
-    templateId:  "customfield_10112"      #  herald_template_id
+    templateId:  "customfield_10112"      # herald_template_id
     caseId:      "customfield_10113"      # herald_case_id
     payload:     "customfield_10114"      # herald_payload (JSON jako tekst)
     casePayload: "customfield_10301"      # herald_cas_payload (widok na potrzeby integracji WIKI MARKUP)

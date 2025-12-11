@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context antiResourceLocking="false" privileged="true">
+    <!-- Brak RemoteAddrValve => brak ograniczenia po IP w dev -->
+</Context>
