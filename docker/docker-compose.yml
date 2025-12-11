@@ -1,0 +1,99 @@
+version: "3.9"
+
+services:
+  postgres-jira:
+    image: postgres:15
+    container_name: jira-postgres
+    environment:
+      POSTGRES_DB: jiradb
+      POSTGRES_USER: jira
+      POSTGRES_PASSWORD: jira
+    volumes:
+      - pgdata_jira:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jira -d jiradb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  jira:
+    image: atlassian/jira-software:9
+    container_name: jira
+    depends_on:
+      postgres-jira:
+        condition: service_healthy
+    ports:
+      - "8080:8080"   # UI Jiry: http://localhost:8080
+    environment:
+      # RAM dla Jiry (minimum sensowne lokalnie)
+      JVM_MINIMUM_MEMORY: 1g
+      JVM_MAXIMUM_MEMORY: 2g
+
+      # JDBC do Postgresa od Jiry
+      ATL_DB_TYPE: postgresql
+      ATL_JDBC_URL: jdbc:postgresql://postgres-jira:5432/jiradb
+      ATL_JDBC_USER: jira
+      ATL_JDBC_PASSWORD: jira
+    volumes:
+      - jiradata:/var/atlassian/application-data/jira
+
+  postgres-confluence:
+    image: postgres:15
+    container_name: confluence-postgres
+    environment:
+      POSTGRES_DB: confluencedb
+      POSTGRES_USER: confluence
+      POSTGRES_PASSWORD: confluence
+    volumes:
+      - pgdata_confluence:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confluence -d confluencedb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  confluence:
+    image: atlassian/confluence:latest
+    container_name: confluence-dc
+    depends_on:
+      postgres-confluence:
+        condition: service_healthy
+    ports:
+      - "8090:8090"   # UI Confluence: http://localhost:8090
+      - "8091:8091"   # komunikacja klastra (Hazelcast)
+    environment:
+      # Confluence jest bardziej głodna RAM niż Jira
+      JVM_MINIMUM_MEMORY: 2g
+      JVM_MAXIMUM_MEMORY: 3g
+
+      # JDBC do Postgresa od Confluence
+      ATL_DB_TYPE: postgresql
+      ATL_JDBC_URL: jdbc:postgresql://postgres-confluence:5432/confluencedb
+      ATL_JDBC_USER: confluence
+      ATL_JDBC_PASSWORD: confluence
+      ATL_DB_DRIVER: org.postgresql.Driver
+
+      # tryb Data Center (wymaga licencji DC/trial)
+      CLUSTERED: "true"
+      CONFLUENCE_CLUSTER_NAME: local-dc-cluster
+      CONFLUENCE_NODE_NAME: node-1
+      CONFLUENCE_NODE_ID: "1"
+
+      # współdzielony katalog klastra DC
+      CONFLUENCE_SHARED_HOME: /var/atlassian/application-data/shared-home
+
+      # opcjonalnie:
+      # ATL_TOMCAT_SECURE: "false"
+
+    volumes:
+      # lokalny home tego noda
+      - confluencehome:/var/atlassian/application-data/confluence
+      # współdzielony "shared home" klastra (dla wielu nodów)
+      - confluenceshared:/var/atlassian/application-data/shared-home
+
+volumes:
+  pgdata_jira:
+  jiradata:
+  pgdata_confluence:
+  confluencehome:
+  confluenceshared:

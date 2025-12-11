@@ -1,0 +1,80 @@
+server:
+  port: 8089
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+spring:
+  application:
+    name: herald-proxy
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+herald:
+  auth:
+    cookie-name: herald_auth
+    max-age-days: 30
+    secret-b64: MOeBPzJq5YNy4v2f+3FIeh1bNOGwhEg/McianDiH1GU=
+
+llm:
+  gpt:
+    apiKey: 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
+    baseUrl: https://api.openai.com/v1/chat/completions
+
+jira:
+  baseUrl: "http://localhost:8080"  # lokalna Jira w Dockerze
+  projectKey: "HRLD"
+  apiVersion: "2"                   # "2" (Server/DC) lub "3" (Cloud)
+  auth:
+    mode: "pat"                   # basic | pat | oauth
+    username: "svc_herald"
+    token: "MjI0ODc0NjAwOTk4OnqTR7KxkTYAyJbMc/ApVr0NMT7z"
+
+  issueTypes:
+    epic: "Epic"
+    template: "Task"
+    case: "Story"
+    section: "Sub-task"
+
+  # ── MAPOWANIE PÓL (Twoje ID) ─────────────────────────────────────────────
+  fields:
+    templateId:  "customfield_10112"      #  herald_template_id
+    caseId:      "customfield_10113"      # herald_case_id
+    payload:     "customfield_10114"      # herald_payload (JSON jako tekst)
+    casePayload: "customfield_10301"      # herald_cas_payload (widok na potrzeby integracji WIKI MARKUP)
+    epicLink:    "customfield_10101"      # Epic Link (u Ciebie to 10101)
+    ratingAvg:   "customfield_10115"      # herald_rating_avg (Number)
+    description: "description"            # wbudowane pole opisu, opcjonalnie
+
+  transitions:
+    template:
+      publish: "31"
+      archive: "41"
+    case:
+      inReview: "21"
+      done: "41"
+    section:
+      start: "11"
+      done: "31"
+
+  links:
+    templateToCase: "Implements"
+
+  options:
+    attachHeaderNoCheck: true
+    useOptimisticLock:  false
+
+feign:
+  client:
+    config:
+      default:
+        loggerLevel: FULL  # NONE | BASIC | HEADERS | FULL
+        decode404: true
+
+logging:
+  level:
+    root: INFO
