@@ -366,12 +366,12 @@ public class CommentService {
 
     private String renderBody(CommentDtos.CommentAnchor anchor, String text, boolean isReply) {
         StringBuilder sb = new StringBuilder();
-        sb.append("[Herald] ");
-        sb.append(isReply ? "Odpowiedź w wątku" : "Komentarz w wątku");
-        sb.append("\n\n");
-        if (anchor != null && anchor.snippet() != null && !anchor.snippet().isBlank()) {
-            sb.append("Kontekst: \"").append(anchor.snippet()).append("\"\n\n");
-        }
+//        sb.append("[Herald] ");
+//        sb.append(isReply ? "Odpowiedź w wątku" : "Komentarz w wątku");
+//        sb.append("\n\n");
+//        if (anchor != null && anchor.snippet() != null && !anchor.snippet().isBlank()) {
+//            sb.append("Kontekst: \"").append(anchor.snippet()).append("\"\n\n");
+//        }
         sb.append(text);
         return sb.toString();
     }
