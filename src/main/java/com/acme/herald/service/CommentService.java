@@ -45,7 +45,7 @@ public class CommentService {
         String commentId = UUID.randomUUID().toString();
 
         // 1) tworzymy Jira comment
-        String jiraBody = renderBody(body.anchor(), body.text(), false);
+        String jiraBody = renderBody(body.anchor(), body.text(), body.body(), false);
         JiraModels.Comment jiraComment = jira.addComment(issueKey, jiraBody);
 
         // 2) meta do property
@@ -53,6 +53,7 @@ public class CommentService {
                 commentId,
                 jiraComment.id(),
                 author,
+                body.body(), // NEW
                 jiraComment.created() != null ? jiraComment.created() : now,
                 jiraComment.updated() != null ? jiraComment.updated() : now
         );
@@ -96,7 +97,7 @@ public class CommentService {
             }
 
             // 1) Jira comment
-            String jiraBody = renderBody(t.anchor(), body.text(), true);
+            String jiraBody = renderBody(t.anchor(), body.text(), body.body(), true);
             JiraModels.Comment jiraComment = jira.addComment(issueKey, jiraBody);
 
             String commentId = UUID.randomUUID().toString();
@@ -104,6 +105,7 @@ public class CommentService {
                     commentId,
                     jiraComment.id(),
                     author,
+                    body.body(),
                     jiraComment.created() != null ? jiraComment.created() : now,
                     jiraComment.updated() != null ? jiraComment.updated() : now
             );
@@ -176,7 +178,7 @@ public class CommentService {
                     .orElse(null);
             var anchor = t != null ? t.anchor() : null;
 
-            String jiraBody = renderBody(anchor, body.text(), false);
+            String jiraBody = renderBody(anchor, body.text(), body.body(), false);
             JiraModels.Comment updated = jira.updateComment(issueKey, jiraCommentId, jiraBody);
 
             // 2) update updatedAt w meta
@@ -195,6 +197,7 @@ public class CommentService {
                                 c.id(),
                                 c.jiraCommentId(),
                                 c.author(),
+                                body.body(), // NEW
                                 c.createdAt(),
                                 updated.updated() != null ? updated.updated() : c.updatedAt()
                         ));
@@ -338,6 +341,7 @@ public class CommentService {
                         cm.id(),
                         cm.author(),
                         text,
+                        cm.body(),
                         createdAt,
                         updatedAt
                 ));
@@ -364,15 +368,7 @@ public class CommentService {
         return me.key() != null ? me.key() : "unknown";
     }
 
-    private String renderBody(CommentDtos.CommentAnchor anchor, String text, boolean isReply) {
-        StringBuilder sb = new StringBuilder();
-//        sb.append("[Herald] ");
-//        sb.append(isReply ? "Odpowiedź w wątku" : "Komentarz w wątku");
-//        sb.append("\n\n");
-//        if (anchor != null && anchor.snippet() != null && !anchor.snippet().isBlank()) {
-//            sb.append("Kontekst: \"").append(anchor.snippet()).append("\"\n\n");
-//        }
-        sb.append(text);
-        return sb.toString();
+    private String renderBody(CommentDtos.CommentAnchor anchor, String text, Object tiptapBody, boolean isReply) {
+        return CommentsTipTapJiraWikiRenderer.render(tiptapBody, text);
     }
 }
