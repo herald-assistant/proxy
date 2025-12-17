@@ -8,6 +8,20 @@ public class JiraModels {
                                Map<String, String> avatarUrls) {
     }
 
+    public record PermissionsResponse(
+            Map<String, PermissionEntry> permissions
+    ) {
+    }
+
+    public record PermissionEntry(
+            Boolean havePermission,
+            String id,
+            String key,
+            String name,
+            String type
+    ) {
+    }
+
     public record Issue(String id, String key, Map<String, Object> fields) {
     }
 

@@ -13,6 +13,8 @@ public interface JiraProvider {
 
     JiraModels.UserResponse getMe();
 
+    JiraModels.PermissionsResponse getMyPermissions(String projectKey, String issueKey, List<String> permissions);
+
     IssueRef createIssue(Map<String, Object> body);
 
     Map<String, Object> getIssue(String issueKey, String expand);

@@ -33,6 +33,17 @@ public class JiraServerProvider implements JiraProvider {
     }
 
     @Override
+    public JiraModels.PermissionsResponse getMyPermissions(String projectKey, String issueKey, List<String> permissions) {
+        var tp = (TokenPayload) req.getAttribute("herald.currentAuth");
+
+        String permissionsCsv = (permissions == null || permissions.isEmpty())
+                ? null
+                : String.join(",", permissions);
+
+        return api.myPermissions(auth(tp), projectKey, issueKey, permissionsCsv);
+    }
+
+    @Override
     public IssueRef createIssue(Map<String, Object> body) {
         var tp = (TokenPayload) req.getAttribute("herald.currentAuth");
         var resp = api.createIssue(auth(tp), body);

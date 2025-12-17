@@ -16,6 +16,14 @@ public interface JiraApiV2Client {
     @GetMapping(value = "/myself", consumes = MediaType.APPLICATION_JSON_VALUE)
     JiraModels.UserResponse getMe(@RequestHeader("Authorization") String auth);
 
+    @GetMapping(value = "/mypermissions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    JiraModels.PermissionsResponse myPermissions(
+            @RequestHeader("Authorization") String auth,
+            @RequestParam(required = false) String projectKey,
+            @RequestParam(required = false) String issueKey,
+            @RequestParam(required = false) String permissions
+    );
+
     @PostMapping(value = "/issue", consumes = MediaType.APPLICATION_JSON_VALUE)
     CreateIssueResponse createIssue(@RequestHeader("Authorization") String auth, @RequestBody Map<String, Object> body);
 
