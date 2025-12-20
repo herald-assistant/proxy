@@ -10,6 +10,7 @@ import com.acme.herald.provider.feign.JiraApiV2Client;
 import com.acme.herald.web.error.ConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class JiraServerProvider implements JiraProvider {
@@ -41,6 +43,24 @@ public class JiraServerProvider implements JiraProvider {
                 : String.join(",", permissions);
 
         return api.myPermissions(auth(tp), projectKey, issueKey, permissionsCsv);
+    }
+
+    @Override
+    public Map<String, Object> getProjectProperty(String projectKey, String propertyKey) {
+        var tp = (TokenPayload) req.getAttribute("herald.currentAuth");
+        try {
+            return api.getProjectProperty(auth(tp), projectKey, propertyKey);
+        } catch (RuntimeException e) {
+            log.error("Exception during fetching ProjectProperty: " + projectKey + ", returning empty map" + e.getMessage());
+            // Jira: property nie istnieje => 404. Traktujemy jako "brak", a nie błąd.
+            return Map.of();
+        }
+    }
+
+    @Override
+    public void setProjectProperty(String projectKey, String propertyKey, Object propertyValue) {
+        var tp = (TokenPayload) req.getAttribute("herald.currentAuth");
+        api.setProjectProperty(auth(tp), projectKey, propertyKey, propertyValue);
     }
 
     @Override
@@ -157,7 +177,12 @@ public class JiraServerProvider implements JiraProvider {
     @Override
     public Map<String, Object> getIssueProperty(String issueKey, String propertyKey) {
         var tp = (TokenPayload) req.getAttribute("herald.currentAuth");
-        return api.getIssueProperty(auth(tp), issueKey, propertyKey);
+        try {
+            return api.getIssueProperty(auth(tp), issueKey, propertyKey);
+        } catch (RuntimeException e) {
+            log.error("Exception during fetching IssueProperty: " + propertyKey + ", returning empty map" + e.getMessage());
+            return Map.of();
+        }
     }
 
     @Override

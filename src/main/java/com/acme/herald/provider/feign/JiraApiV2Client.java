@@ -24,6 +24,21 @@ public interface JiraApiV2Client {
             @RequestParam(required = false) String permissions
     );
 
+    @GetMapping("/project/{projectKey}/properties/{propertyKey}")
+    Map<String, Object> getProjectProperty(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable("projectKey") String projectKey,
+            @PathVariable("propertyKey") String propertyKey
+    );
+
+    @PutMapping(value = "/project/{projectKey}/properties/{propertyKey}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    void setProjectProperty(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable("projectKey") String projectKey,
+            @PathVariable("propertyKey") String propertyKey,
+            @RequestBody Object propertyValue
+    );
+
     @PostMapping(value = "/issue", consumes = MediaType.APPLICATION_JSON_VALUE)
     CreateIssueResponse createIssue(@RequestHeader("Authorization") String auth, @RequestBody Map<String, Object> body);
 

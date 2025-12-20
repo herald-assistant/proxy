@@ -15,6 +15,10 @@ public interface JiraProvider {
 
     JiraModels.PermissionsResponse getMyPermissions(String projectKey, String issueKey, List<String> permissions);
 
+    Map<String, Object> getProjectProperty(String projectKey, String propertyKey);
+
+    void setProjectProperty(String projectKey, String propertyKey, Object propertyValue);
+
     IssueRef createIssue(Map<String, Object> body);
 
     Map<String, Object> getIssue(String issueKey, String expand);
