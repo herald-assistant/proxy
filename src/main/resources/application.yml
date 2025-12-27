@@ -20,11 +20,14 @@ herald:
     cookie-name: herald_auth
     max-age-days: 30
     secret-b64: MOeBPzJq5YNy4v2f+3FIeh1bNOGwhEg/McianDiH1GU=
-
-llm:
-  gpt:
-    apiKey: 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
-    baseUrl: https://api.openai.com/v1/chat/completions
+  llm:
+    proxy:
+      http-log:
+        enabled: true          # master switch
+        log-bodies: true       # osobny kill-switch na body
+        max-body-chars: 1000000000    # utnij logi, bo LLM potrafi być gadułą
+        log-headers: true
+        only-errors: false      # jak true -> loguj tylko >=400
 
 jira:
   baseUrl: ${JIRA_BASE_URL:http://localhost:8080}

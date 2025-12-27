@@ -98,6 +98,45 @@ public class AdminConfigService {
         saveStored(stored);
     }
 
+    public LlmCatalogModelDto findEnabledModelInternalOrThrow(String modelId) {
+        var id = (modelId == null ? "" : modelId.trim());
+        if (id.isEmpty()) throw new IllegalArgumentException("Brak modelId w request.model");
+
+        var cat = getCatalogInternal();
+        var models = cat.models() != null ? cat.models() : List.<LlmCatalogModelDto>of();
+
+        return models.stream()
+                .filter(m -> id.equals((m.id()).trim()))
+                .filter(m -> Boolean.TRUE.equals(m.enabled()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Model '%s' nie istnieje lub jest wyłączony".formatted(id)));
+    }
+
+    public LlmCatalogDto getCatalogInternal() {
+        requireProjectAdmin();
+
+        StoredCatalog stored = loadStored();
+
+        List<LlmCatalogModelDto> models = new ArrayList<>();
+        for (StoredModel m : stored.models()) {
+            models.add(new LlmCatalogModelDto(
+                    m.id(),
+                    m.label(),
+                    m.model(),
+                    m.baseUrl(),
+                    m.contextWindowTokens(),
+                    m.enabled(),
+                    m.notes(),
+                    m.supports(),
+                    m.defaults(),
+                    m.tokenEnc(),
+                    m.tokenEnc() != null && !m.tokenEnc().isBlank()
+            ));
+        }
+        return new LlmCatalogDto(stored.version(), models);
+    }
+
+
     // ─────────────────────────────────────────────────────────────────
 
     private void requireProjectAdmin() {

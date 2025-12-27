@@ -2,19 +2,16 @@ package com.acme.herald.web;
 
 import com.acme.herald.domain.ChatDtos;
 import com.acme.herald.service.LlmProxyService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(value = "/api/llm", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequiredArgsConstructor
 public class LlmProxyController {
-
     private final LlmProxyService service;
-
-    public LlmProxyController(LlmProxyService service) {
-        this.service = service;
-    }
 
     @PostMapping("/chat")
     public ResponseEntity<ChatDtos.ProxyReply> chat(@RequestBody ChatDtos.ChatRequest request) {
