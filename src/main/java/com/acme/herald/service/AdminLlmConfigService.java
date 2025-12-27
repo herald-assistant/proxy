@@ -20,7 +20,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-public class AdminConfigService {
+public class AdminLlmConfigService {
 
     private static final String PROP_KEY = "herald.llmCatalog";
     private static final String PERM_ADMIN = "ADMINISTER_PROJECTS";
@@ -56,7 +56,7 @@ public class AdminConfigService {
         return new LlmCatalogDto(stored.version(), models);
     }
 
-    public void saveCatalog(LlmCatalogDto incoming) {
+    public void upsertLlmCatalog(LlmCatalogDto incoming) {
         requireProjectAdmin(); // 👈 autoryzacja
 
         StoredCatalog current = loadStored();

@@ -23,7 +23,7 @@ import java.util.Map;
 public class LlmProxyService {
 
     private final RestClient rest;
-    private final AdminConfigService adminConfig;
+    private final AdminLlmConfigService adminConfig;
     private final CryptoService crypto;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())

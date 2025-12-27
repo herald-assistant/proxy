@@ -1,8 +1,5 @@
 package com.acme.herald.service;
 
-// package com.acme.herald.service;
-
-import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.HeraldAttachmentDto;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
@@ -22,14 +19,18 @@ public class ImageService {
     );
 
     private final JiraProvider jira;
-    private final JiraProperties cfg;
+    private final AdminJiraConfigService jiraAdminCfg;
 
     public HeraldAttachmentDto upload(String issueKey, MultipartFile file) {
+        // (opcjonalnie) walidacja mime
+        if (file.getContentType() != null && !ALLOWED_MIME.contains(file.getContentType())) {
+            throw new IllegalArgumentException("Nieobsługiwany typ pliku: " + file.getContentType());
+        }
+
         var a = jira.attachAndReturnMeta(issueKey, file);
 
-        boolean useProxy = Boolean.parseBoolean(String.valueOf(
-                cfg.getOptions().getOrDefault("proxyAttachmentContent", true)
-        ));
+        var cfg = jiraAdminCfg.getForRuntime();
+        boolean useProxy = Boolean.TRUE.equals(cfg.options().proxyAttachmentContent());
 
         String base = "/images/" + a.id();
 
@@ -47,17 +48,15 @@ public class ImageService {
                 a.size(),
                 a.mimeType(),
                 url,
-                url,      // downloadUrl: możesz dodać ?download=true po stronie FE
+                url,
                 thumb
         );
     }
 
     public ResponseEntity<byte[]> streamContent(String attachmentId, boolean download) {
-        // pobieramy metadane + bytes z Jiry (w Providerze zachowujemy auth użytkownika)
         var stream = jira.downloadAttachment(attachmentId);
-
-        // uzupełniamy nagłówki (Content-Type i disposition)
         var meta = jira.getAttachment(attachmentId);
+
         MediaType ct = parseMedia(meta.mimeType());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(ct != null ? ct : MediaType.APPLICATION_OCTET_STREAM);
@@ -78,7 +77,8 @@ public class ImageService {
     public ResponseEntity<byte[]> streamThumbnail(String attachmentId) {
         var thumb = jira.downloadAttachmentThumbnail(attachmentId);
         var meta = jira.getAttachment(attachmentId);
-        MediaType ct = parseMedia(meta.mimeType()); // zwykle też image/*
+
+        MediaType ct = parseMedia(meta.mimeType());
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(ct != null ? ct : MediaType.APPLICATION_OCTET_STREAM);
         headers.setCacheControl(CacheControl.noCache().getHeaderValue());

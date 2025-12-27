@@ -23,7 +23,7 @@ public interface JiraProvider {
 
     Map<String, Object> getIssue(String issueKey, String expand);
 
-    void updateIssue(String issueKey, Map<String, Object> body, Integer expectedVersion);
+    void updateIssue(String issueKey, Map<String, Object> body);
 
     void transition(String issueKey, String transitionId);
 

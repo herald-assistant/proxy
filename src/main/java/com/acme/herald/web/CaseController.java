@@ -19,16 +19,8 @@ public class CaseController {
     private final CaseService service;
 
     @PostMapping
-    public ResponseEntity<CaseRef> createCase(@RequestBody @Valid CreateCase req) {
-        return ResponseEntity.status(201).body(service.createCase(req));
-    }
-
-    @PutMapping("/{caseKey}/payload")
-    public ResponseEntity<CaseRef> updatePayload(
-            @PathVariable String caseKey,
-            @RequestHeader(name = "If-Match-Version", required = false) Integer version,
-            @RequestBody String payloadJson) {
-        return ResponseEntity.ok(service.updatePayload(caseKey, version == null ? 0 : version, payloadJson));
+    public ResponseEntity<CaseRef> upsertCase(@RequestBody @Valid CreateCase req) {
+        return ResponseEntity.status(201).body(service.upsertCase(req));
     }
 
     @PostMapping("/{caseKey}/transition")
