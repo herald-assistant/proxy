@@ -10,5 +10,7 @@ public record CreateTemplate(
         @NotBlank String template_id,
         @NotBlank String title,
         List<String> labels,
-        @NotNull JsonNode payload
-) {}
+        @NotNull JsonNode payload,
+        @NotNull String status
+) {
+}

@@ -25,10 +25,6 @@ public interface JiraProvider {
 
     void updateIssue(String issueKey, Map<String, Object> body);
 
-    void transition(String issueKey, String transitionId);
-
-    JiraModels.TransitionList transitions(String issueKey);
-
     // ───── NOWE KOMENTARZE ─────
 
     List<JiraModels.Comment> getComments(String issueKey);

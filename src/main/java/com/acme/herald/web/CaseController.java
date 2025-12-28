@@ -1,6 +1,5 @@
 package com.acme.herald.web;
 
-import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.CreateCase;
 import com.acme.herald.domain.dto.RatingInput;
@@ -21,17 +20,6 @@ public class CaseController {
     @PostMapping
     public ResponseEntity<CaseRef> upsertCase(@RequestBody @Valid CreateCase req) {
         return ResponseEntity.status(201).body(service.upsertCase(req));
-    }
-
-    @PostMapping("/{caseKey}/transition")
-    public ResponseEntity<Void> caseTransition(@PathVariable String caseKey, @RequestBody TransitionReq req) {
-        service.transition(caseKey, req.transitionId());
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/{caseKey}/transitions")
-    public JiraModels.TransitionList caseTransitions(@PathVariable String caseKey) {
-        return service.transitions(caseKey);
     }
 
     @PostMapping("/{caseKey}/comments")

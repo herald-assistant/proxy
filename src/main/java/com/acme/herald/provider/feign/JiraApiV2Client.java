@@ -48,12 +48,6 @@ public interface JiraApiV2Client {
     @PutMapping(value = "/issue/{key}", consumes = MediaType.APPLICATION_JSON_VALUE)
     void updateIssue(@RequestHeader("Authorization") String auth, @PathVariable String key, @RequestBody Map<String, Object> body);
 
-    @PostMapping(value = "/issue/{key}/transitions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    void transition(@RequestHeader("Authorization") String auth, @PathVariable String key, @RequestBody Map<String, Object> body);
-
-    @GetMapping(value = "/issue/{key}/transitions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    JiraModels.TransitionList transitions(@RequestHeader("Authorization") String auth, @PathVariable String key);
-
     @PostMapping(value = "/issue/{key}/watchers", consumes = MediaType.APPLICATION_JSON_VALUE)
     void addWatcher(@RequestHeader("Authorization") String auth, @PathVariable String key, @RequestBody String usernameOrAccountId);
 

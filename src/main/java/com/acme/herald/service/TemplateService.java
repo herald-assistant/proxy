@@ -1,7 +1,6 @@
 package com.acme.herald.service;
 
 import com.acme.herald.config.JiraProperties;
-import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.CreateTemplate;
 import com.acme.herald.domain.dto.TemplateRef;
 import com.acme.herald.provider.JiraProvider;
@@ -26,16 +25,21 @@ public class TemplateService {
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
 
-        var fields = Map.of(
-                "project", Map.of("key", jiraProps.getProjectKey()),
-                "summary", req.title(),
-                "issuetype", Map.of("name", issueTypes.template()),
-                fieldsCfg.templateId(), req.template_id(),
-                "labels", req.labels() != null ? req.labels() : List.of(),
-                fieldsCfg.payload(), req.payload().toString()
-        );
+        if (cfg.status().templateFlow().stream().noneMatch(s -> s.equals(req.status()))) {
+            throw new IllegalArgumentException("Niepoprawny status template: " + req.status() + ". Dozwolone: " + cfg.status().templateFlow());
+        }
 
-        // Zamiast "herald_template_id ~ ..." użyjemy stabilnie customfield id -> cf[10112]
+        // pola issue
+        var fields = new java.util.HashMap<String, Object>();
+        fields.put("project", Map.of("key", jiraProps.getProjectKey()));
+        fields.put("summary", req.title());
+        fields.put("issuetype", Map.of("name", issueTypes.template()));
+        fields.put(fieldsCfg.templateId(), req.template_id());
+        fields.put("labels", req.labels() != null ? req.labels() : List.of());
+        fields.put(fieldsCfg.payload(), req.payload().toString());
+        fields.put(fieldsCfg.templateStatus(), req.status());
+
+        // JQL: znajdź issue template po customfield templateId i braku caseId
         String jql = "%s ~ \"%s\" AND %s is EMPTY"
                 .formatted(
                         toJqlField(fieldsCfg.templateId()),
@@ -58,15 +62,6 @@ public class TemplateService {
         return new TemplateRef(issueKey, url);
     }
 
-    // Zostawiam (jeśli jeszcze gdzieś używasz); na MVP możesz docelowo wywalić statusy.
-    public void transition(String issueKey, String transitionId) {
-        jira.transition(issueKey, transitionId);
-    }
-
-    public JiraModels.TransitionList transitions(String issueKey) {
-        return jira.transitions(issueKey);
-    }
-
     // ───────────────── helpers ─────────────────
 
     private static final Pattern CUSTOMFIELD = Pattern.compile("^customfield_(\\d+)$");
@@ -81,7 +76,6 @@ public class TemplateService {
 
     static String escapeJql(String s) {
         if (s == null) return "";
-        // minimalnie: escapuj cudzysłowy
         return s.replace("\"", "\\\"");
     }
 }

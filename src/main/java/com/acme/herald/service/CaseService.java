@@ -55,14 +55,6 @@ public class CaseService {
         return new CaseRef(issueKey, url);
     }
 
-    public void transition(String caseKey, String transitionId) {
-        jira.transition(caseKey, transitionId);
-    }
-
-    public JiraModels.TransitionList transitions(String caseKey) {
-        return jira.transitions(caseKey);
-    }
-
     public void commentWithMentions(String caseKey, String text) {
         jira.addComment(caseKey, text);
     }

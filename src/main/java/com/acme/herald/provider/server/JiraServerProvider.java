@@ -83,18 +83,6 @@ public class JiraServerProvider implements JiraProvider {
     }
 
     @Override
-    public void transition(String issueKey, String transitionId) {
-        var tp = currentAuth();
-        api.transition(auth(tp), issueKey, Map.of("transition", Map.of("id", transitionId)));
-    }
-
-    @Override
-    public JiraModels.TransitionList transitions(String issueKey) {
-        var tp = currentAuth();
-        return api.transitions(auth(tp), issueKey);
-    }
-
-    @Override
     public void setVote(String issueKey, boolean up) {
         var tp = currentAuth();
         if (up) api.addVote(auth(tp), issueKey);
@@ -173,7 +161,7 @@ public class JiraServerProvider implements JiraProvider {
         try {
             return api.getIssueProperty(auth(tp), issueKey, propertyKey);
         } catch (RuntimeException e) {
-            log.error("Exception during fetching IssueProperty: " + propertyKey + ", returning empty map" + e.getMessage());
+            log.warn("Exception during fetching IssueProperty: " + propertyKey + ", returning empty map" + e.getMessage());
             return Map.of();
         }
     }

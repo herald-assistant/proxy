@@ -37,30 +37,6 @@ public class JiraModels {
     public record ChangelogItem(String field, String from, String to) {
     }
 
-    public record TransitionList(List<Transition> transitions) {
-    }
-
-    public record Transition(String id,
-                             String name,
-                             Status to,
-                             Boolean isGlobal,
-                             Boolean isInitial,
-                             Boolean hasScreen,
-                             Map<String, Object> fields) {
-    }
-
-
-    public record Status(String id,
-                         String name,
-                         StatusCategory statusCategory) {
-    }
-
-    public record StatusCategory(Integer id,
-                                 String key,
-                                 String colorName,
-                                 String name) {
-    }
-
     public record AssigneePayload(String name, String key) {
     }
 
