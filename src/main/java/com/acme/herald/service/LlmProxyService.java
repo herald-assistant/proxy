@@ -2,7 +2,7 @@ package com.acme.herald.service;
 
 import com.acme.herald.auth.CryptoService;
 import com.acme.herald.domain.ChatDtos;
-import com.acme.herald.web.admin.LlmCatalogModelDto;
+import com.acme.herald.web.admin.LlmIntegrationDtos.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;

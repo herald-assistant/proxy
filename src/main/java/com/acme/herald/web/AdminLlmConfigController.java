@@ -1,7 +1,7 @@
 package com.acme.herald.web;
 
 import com.acme.herald.service.AdminLlmConfigService;
-import com.acme.herald.web.admin.LlmCatalogDto;
+import com.acme.herald.web.admin.LlmIntegrationDtos.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
