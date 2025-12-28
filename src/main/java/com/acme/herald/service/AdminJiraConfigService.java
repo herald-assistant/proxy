@@ -10,6 +10,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.acme.herald.web.admin.JiraIntegrationDtos.*;
@@ -27,6 +28,8 @@ public class AdminJiraConfigService {
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
+    private volatile JiraIntegrationDto runtimeCache;
+
     // ─────────── ADMIN endpoints ───────────
 
     public JiraIntegrationDto getForAdmin() {
@@ -43,18 +46,34 @@ public class AdminJiraConfigService {
                 normalizeIssueTypes(incoming.issueTypes()),
                 normalizeFields(incoming.fields()),
                 normalizeLinks(incoming.links()),
-                normalizeOptions(incoming.options())
+                normalizeOptions(incoming.options()),
+                normalizeStatus(incoming.status())
         );
 
+        validateStatusConfigOrThrow(out);
+
         saveStored(out);
+
+        // ✅ update runtime cache (żeby zwykli userzy mieli config bez perms do property)
+        runtimeCache = toDto(out);
     }
 
     // ─────────── runtime (dla normalnych userów) ───────────
-    // Bez sprawdzania admin perms — bo case/template mają działać dla zwykłych użytkowników.
 
     public JiraIntegrationDto getForRuntime() {
-        StoredJiraIntegration stored = loadStoredOrDefault();
-        return toDto(stored);
+        JiraIntegrationDto cached = runtimeCache;
+        if (cached != null) return cached;
+
+        try {
+            StoredJiraIntegration stored = loadStoredOrDefault();
+            JiraIntegrationDto dto = toDto(stored);
+            runtimeCache = dto;
+            return dto;
+        } catch (Exception e) {
+            JiraIntegrationDto dto = toDto(defaultConfig());
+            runtimeCache = dto;
+            return dto;
+        }
     }
 
     // ───────────────────────────────────────────────────────
@@ -83,7 +102,6 @@ public class AdminJiraConfigService {
             StoredJiraIntegration stored = om.convertValue(value, StoredJiraIntegration.class);
             return mergeWithDefaults(stored);
         } catch (Exception e) {
-            // jeśli ktoś zapisał śmieci w property → wracamy do default i nie wysypujemy runtime
             return defaultConfig();
         }
     }
@@ -93,7 +111,7 @@ public class AdminJiraConfigService {
     }
 
     private JiraIntegrationDto toDto(StoredJiraIntegration s) {
-        return new JiraIntegrationDto(s.version(), s.issueTypes(), s.fields(), s.links(), s.options());
+        return new JiraIntegrationDto(s.version(), s.issueTypes(), s.fields(), s.links(), s.options(), s.status());
     }
 
     // ─────────── Defaults + normalizacja ───────────
@@ -109,22 +127,56 @@ public class AdminJiraConfigService {
                         "customfield_10301", // casePayload
                         "customfield_10101", // epicLink
                         "customfield_10115", // ratingAvg
-                        "description"        // description
+                        "description",        // description
+
+                        "",                   // ✅ caseStatus (admin uzupełni)
+                        ""                    // ✅ templateStatus (admin uzupełni)
                 ),
                 new JiraLinksDto("Implements"),
-                new JiraOptionsDto(true, true, false)
+                new JiraOptionsDto(true, true, false),
+                new JiraStatusDto(
+                        List.of("todo", "in_progress", "done", "rejected"),
+                        List.of("todo", "in_progress", "done", "rejected", "published")
+                )
         );
     }
 
     private StoredJiraIntegration mergeWithDefaults(StoredJiraIntegration s) {
         StoredJiraIntegration d = defaultConfig();
         return new StoredJiraIntegration(
-                (s.version() != null ? s.version() : d.version()),
-                (s.issueTypes() != null ? s.issueTypes() : d.issueTypes()),
-                (s.fields() != null ? s.fields() : d.fields()),
-                (s.links() != null ? s.links() : d.links()),
-                (s.options() != null ? s.options() : d.options())
+                (s != null && s.version() != null ? s.version() : d.version()),
+                (s != null && s.issueTypes() != null ? s.issueTypes() : d.issueTypes()),
+                (s != null && s.fields() != null ? mergeFieldsWithDefaults(s.fields(), d.fields()) : d.fields()),
+                (s != null && s.links() != null ? s.links() : d.links()),
+                (s != null && s.options() != null ? s.options() : d.options()),
+                (s != null && s.status() != null ? mergeStatusWithDefaults(s.status(), d.status()) : d.status())
         );
+    }
+
+    private JiraFieldsDto mergeFieldsWithDefaults(JiraFieldsDto s, JiraFieldsDto d) {
+        return new JiraFieldsDto(
+                pick(s.templateId(), d.templateId()),
+                pick(s.caseId(), d.caseId()),
+                pick(s.payload(), d.payload()),
+                pick(s.casePayload(), d.casePayload()),
+                pick(s.epicLink(), d.epicLink()),
+                pick(s.ratingAvg(), d.ratingAvg()),
+                pick(s.description(), d.description()),
+                pick(s.caseStatus(), d.caseStatus()),
+                pick(s.templateStatus(), d.templateStatus())
+        );
+    }
+
+    private JiraStatusDto mergeStatusWithDefaults(JiraStatusDto s, JiraStatusDto d) {
+        return new JiraStatusDto(
+                (s.caseFlow() != null && !s.caseFlow().isEmpty()) ? s.caseFlow() : d.caseFlow(),
+                (s.templateFlow() != null && !s.templateFlow().isEmpty()) ? s.templateFlow() : d.templateFlow()
+        );
+    }
+
+    private static String pick(String value, String def) {
+        String t = value == null ? "" : value.trim();
+        return t.isEmpty() ? def : t;
     }
 
     private JiraIssueTypesDto normalizeIssueTypes(JiraIssueTypesDto in) {
@@ -146,7 +198,9 @@ public class AdminJiraConfigService {
                 nz(in.casePayload()),
                 nz(in.epicLink()),
                 nz(in.ratingAvg()),
-                nz(in.description())
+                nz(in.description()),
+                nz(in.caseStatus()),
+                nz(in.templateStatus())
         );
     }
 
@@ -163,6 +217,46 @@ public class AdminJiraConfigService {
                 in.attachHeaderNoCheck() != null ? in.attachHeaderNoCheck() : d.attachHeaderNoCheck(),
                 in.useOptimisticLock() != null ? in.useOptimisticLock() : d.useOptimisticLock()
         );
+    }
+
+    private JiraStatusDto normalizeStatus(JiraStatusDto in) {
+        JiraStatusDto d = defaultConfig().status();
+        if (in == null) return d;
+
+        List<String> caseFlow = normalizeFlow(in.caseFlow(), d.caseFlow());
+        List<String> templateFlow = normalizeFlow(in.templateFlow(), d.templateFlow());
+
+        return new JiraStatusDto(caseFlow, templateFlow);
+    }
+
+    private static List<String> normalizeFlow(List<String> src, List<String> def) {
+        if (src == null) return def;
+        List<String> out = src.stream()
+                .map(AdminJiraConfigService::nz)
+                .filter(s -> !s.isBlank())
+                .distinct()
+                .toList();
+        return out.isEmpty() ? def : out;
+    }
+
+    private void validateStatusConfigOrThrow(StoredJiraIntegration cfg) {
+        JiraFieldsDto f = cfg.fields();
+        JiraStatusDto s = cfg.status();
+
+        boolean missingField = f == null
+                || f.caseStatus() == null || f.caseStatus().isBlank()
+                || f.templateStatus() == null || f.templateStatus().isBlank();
+
+        boolean missingFlow = s == null
+                || s.caseFlow() == null || s.caseFlow().isEmpty()
+                || s.templateFlow() == null || s.templateFlow().isEmpty();
+
+        if (missingField) {
+            throw new IllegalArgumentException("Jira config: musisz ustawić fields.caseStatus oraz fields.templateStatus (customfield_xxxxx).");
+        }
+        if (missingFlow) {
+            throw new IllegalArgumentException("Jira config: musisz ustawić status.caseFlow oraz status.templateFlow (lista statusów).");
+        }
     }
 
     private static String nz(String s) {

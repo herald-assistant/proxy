@@ -2,6 +2,8 @@ package com.acme.herald.web.admin;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 public class JiraIntegrationDtos {
 
     public record JiraIntegrationDto(
@@ -9,7 +11,8 @@ public class JiraIntegrationDtos {
             JiraIssueTypesDto issueTypes,
             JiraFieldsDto fields,
             JiraLinksDto links,
-            JiraOptionsDto options
+            JiraOptionsDto options,
+            JiraStatusDto status
     ) {}
 
     public record JiraIssueTypesDto(
@@ -26,7 +29,9 @@ public class JiraIntegrationDtos {
             String casePayload,
             String epicLink,
             String ratingAvg,
-            String description
+            String description,
+            String caseStatus,
+            String templateStatus
     ) {}
 
     public record JiraLinksDto(
@@ -39,12 +44,17 @@ public class JiraIntegrationDtos {
             Boolean useOptimisticLock
     ) {}
 
-    // To trzymamy w Jira Project Property (identyczny shape, łatwo migrować)
     public record StoredJiraIntegration(
             Integer version,
             JiraIssueTypesDto issueTypes,
             JiraFieldsDto fields,
             JiraLinksDto links,
-            JiraOptionsDto options
+            JiraOptionsDto options,
+            JiraStatusDto status
+    ) {}
+
+    public record JiraStatusDto(
+            List<String> caseFlow,
+            List<String> templateFlow
     ) {}
 }
