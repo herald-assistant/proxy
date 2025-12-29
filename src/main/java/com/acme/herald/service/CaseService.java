@@ -1,7 +1,6 @@
 package com.acme.herald.service;
 
 import com.acme.herald.config.JiraProperties;
-import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.CreateCase;
 import com.acme.herald.domain.dto.RatingInput;
@@ -10,8 +9,11 @@ import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.util.Optional.ofNullable;
 
@@ -28,19 +30,32 @@ public class CaseService {
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
 
-        var fields = Map.of(
-                "project", Map.of("key", jiraProps.getProjectKey()),
-                "summary", ofNullable(req.summary()).orElse(""),
-                "description", ofNullable(req.description()).orElse(""),
-                "issuetype", Map.of("name", issueTypes.caseIssue()),
-                fieldsCfg.caseId(), req.case_id(),
-                fieldsCfg.templateId(), req.template_id(),
-                fieldsCfg.payload(), req.payload().toString(),
-                fieldsCfg.casePayload(), req.casePayload(),
-                "labels", req.labels() != null ? req.labels() : List.of()
-        );
+        if (cfg.status().caseFlow().stream().noneMatch(s -> s.equals(req.status()))) {
+            throw new IllegalArgumentException("Niepoprawny status case: " + req.status() + ". Dozwolone: " + cfg.status().caseFlow());
+        }
 
-        var existing = jira.search("herald_case_id ~ " + req.case_id(), 0, 1);
+        // pola issue
+        var fields = new HashMap<String, Object>();
+        fields.put("project", Map.of("key", jiraProps.getProjectKey()));
+        fields.put("summary", ofNullable(req.summary()).orElse(""));
+        fields.put("description", ofNullable(req.description()).orElse(""));
+        fields.put("issuetype", Map.of("name", issueTypes.caseIssue()));
+        fields.put(fieldsCfg.caseId(), req.case_id());
+        fields.put(fieldsCfg.templateId(), req.template_id());
+        fields.put(fieldsCfg.payload(), req.payload().toString());
+        fields.put(fieldsCfg.casePayload(), req.casePayload());
+        fields.put("labels", req.labels() != null ? req.labels() : List.of());
+        if (fieldsCfg.caseStatus() != null && !fieldsCfg.caseStatus().isBlank()) {
+            fields.put(fieldsCfg.caseStatus(), req.status());
+        }
+
+        String jql = "%s ~ \"%s\""
+                .formatted(
+                        toJqlField(fieldsCfg.caseId()),
+                        escapeJql(req.case_id())
+                );
+
+        var existing = jira.search(jql, 0, 1);
 
         String issueKey;
         if (existing.total() == 0) {
@@ -71,5 +86,21 @@ public class CaseService {
         Map<String, Object> body = Map.of("fields", Map.of(ratingField, avg));
         jira.updateIssue(caseKey, body);
         return new RatingResult(avg);
+    }
+
+    // ───────────────── helpers ─────────────────
+
+    private static final Pattern CUSTOMFIELD = Pattern.compile("^customfield_(\\d+)$");
+
+    static String toJqlField(String fieldIdOrName) {
+        String f = fieldIdOrName == null ? "" : fieldIdOrName.trim();
+        Matcher m = CUSTOMFIELD.matcher(f);
+        if (m.matches()) return "cf[" + m.group(1) + "]";
+        return f;
+    }
+
+    static String escapeJql(String s) {
+        if (s == null) return "";
+        return s.replace("\"", "\\\"");
     }
 }

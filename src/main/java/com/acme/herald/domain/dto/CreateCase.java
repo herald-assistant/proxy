@@ -13,5 +13,6 @@ public record CreateCase(
         String description,
         List<String> labels,
         @NotNull JsonNode payload, // json
-        @NotNull String casePayload // wikimarkup
+        @NotNull String casePayload, // wikimarkup
+        String status
 ) {}

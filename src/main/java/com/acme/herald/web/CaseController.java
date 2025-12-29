@@ -39,9 +39,6 @@ public class CaseController {
         return ResponseEntity.ok(service.rate(caseKey, req));
     }
 
-    public record TransitionReq(String transitionId) {
-    }
-
     public record CommentReq(String text) {
     }
 
