@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static java.util.Optional.ofNullable;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +36,7 @@ public class CaseService {
 
         // pola issue
         var fields = new HashMap<String, Object>();
-        fields.put("summary", ofNullable(req.summary()).orElse(""));
+        fields.put("summary", isNotBlank(req.summary()) ? req.summary() : req.case_id());
         fields.put("project", Map.of("key", jiraProps.getProjectKey()));
         fields.put("issuetype", Map.of("name", issueTypes.caseIssue()));
         fields.put("labels", req.labels() != null ? req.labels() : List.of());

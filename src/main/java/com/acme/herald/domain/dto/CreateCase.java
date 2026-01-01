@@ -8,7 +8,7 @@ import java.util.List;
 
 public record CreateCase(
         @NotBlank String case_id,
-        @NotBlank String template_id,
+        String template_id,
         String summary,
         String description,
         List<String> labels,
