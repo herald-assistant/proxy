@@ -8,6 +8,8 @@ public class JiraIntegrationDtos {
 
     public record JiraIntegrationDto(
             Integer version,
+            String baseUrl,
+            String projectKey,
             JiraIssueTypesDto issueTypes,
             JiraFieldsDto fields,
             JiraLinksDto links,
@@ -46,6 +48,8 @@ public class JiraIntegrationDtos {
 
     public record StoredJiraIntegration(
             Integer version,
+            String baseUrl,
+            String projectKey,
             JiraIssueTypesDto issueTypes,
             JiraFieldsDto fields,
             JiraLinksDto links,

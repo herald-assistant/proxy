@@ -43,6 +43,8 @@ public class AdminJiraConfigService {
 
         StoredJiraIntegration out = new StoredJiraIntegration(
                 incoming.version() != null ? incoming.version() : 1,
+                nz(incoming.baseUrl()),
+                nz(incoming.projectKey()),
                 normalizeIssueTypes(incoming.issueTypes()),
                 normalizeFields(incoming.fields()),
                 normalizeLinks(incoming.links()),
@@ -54,7 +56,6 @@ public class AdminJiraConfigService {
 
         saveStored(out);
 
-        // ✅ update runtime cache (żeby zwykli userzy mieli config bez perms do property)
         runtimeCache = toDto(out);
     }
 
@@ -79,8 +80,8 @@ public class AdminJiraConfigService {
     // ───────────────────────────────────────────────────────
 
     private void requireProjectAdmin() {
-        var projectKey = jiraProps.getProjectKey();
-        JiraModels.PermissionsResponse perms = jira.getMyPermissions(projectKey, null, null);
+        String storageProjectKey = jiraProps.getProjectKey(); // tu trzymamy project property (repo config)
+        JiraModels.PermissionsResponse perms = jira.getMyPermissions(storageProjectKey, null, null);
         var map = perms != null ? perms.permissions() : null;
 
         boolean isAdmin = map != null
@@ -88,7 +89,7 @@ public class AdminJiraConfigService {
                 && Boolean.TRUE.equals(map.get(PERM_ADMIN).havePermission());
 
         if (!isAdmin) {
-            throw new ForbiddenException("Brak uprawnienia: " + PERM_ADMIN + " w projekcie " + projectKey);
+            throw new ForbiddenException("Brak uprawnienia: " + PERM_ADMIN + " w projekcie " + storageProjectKey);
         }
     }
 
@@ -111,7 +112,19 @@ public class AdminJiraConfigService {
     }
 
     private JiraIntegrationDto toDto(StoredJiraIntegration s) {
-        return new JiraIntegrationDto(s.version(), s.issueTypes(), s.fields(), s.links(), s.options(), s.status());
+        String effectiveProjectKey = pick(s.projectKey(), jiraProps.getProjectKey());
+        String effectivBbaseUrl = pick(s.baseUrl(), jiraProps.getBaseUrl());
+
+        return new JiraIntegrationDto(
+                s.version(),
+                effectivBbaseUrl,
+                effectiveProjectKey,
+                s.issueTypes(),
+                s.fields(),
+                s.links(),
+                s.options(),
+                s.status()
+        );
     }
 
     // ─────────── Defaults + normalizacja ───────────
@@ -119,18 +132,19 @@ public class AdminJiraConfigService {
     private StoredJiraIntegration defaultConfig() {
         return new StoredJiraIntegration(
                 1,
+                "",
+                "",
                 new JiraIssueTypesDto("Epic", "Task", "Story", "Sub-task"),
                 new JiraFieldsDto(
-                        "customfield_10112", // templateId
-                        "customfield_10113", // caseId
-                        "customfield_10114", // payload
-                        "customfield_10301", // casePayload
-                        "customfield_10101", // epicLink
-                        "customfield_10115", // ratingAvg
-                        "description",        // description
-
-                        "",                   // ✅ caseStatus (admin uzupełni)
-                        ""                    // ✅ templateStatus (admin uzupełni)
+                        "summary", // templateId
+                        "summary", // caseId
+                        "description", // payload
+                        "unused", // casePayload
+                        "unused", // epicLink
+                        "unused", // ratingAvg
+                        "unused", // description
+                        "", // caseStatus
+                        "" // templateStatus
                 ),
                 new JiraLinksDto("Implements"),
                 new JiraOptionsDto(true, true, false),
@@ -145,6 +159,8 @@ public class AdminJiraConfigService {
         StoredJiraIntegration d = defaultConfig();
         return new StoredJiraIntegration(
                 (s != null && s.version() != null ? s.version() : d.version()),
+                pick(s != null ? s.baseUrl() : null, d.baseUrl()),
+                pick(s != null ? s.projectKey() : null, d.projectKey()),
                 (s != null && s.issueTypes() != null ? s.issueTypes() : d.issueTypes()),
                 (s != null && s.fields() != null ? mergeFieldsWithDefaults(s.fields(), d.fields()) : d.fields()),
                 (s != null && s.links() != null ? s.links() : d.links()),
