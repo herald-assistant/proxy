@@ -9,7 +9,7 @@ import java.util.List;
 public record CreateCase(
         @NotBlank String case_id,
         @NotBlank String template_id,
-        @NotBlank String summary,
+        String summary,
         String description,
         List<String> labels,
         @NotNull JsonNode payload, // json

@@ -11,6 +11,6 @@ public record CreateTemplate(
         @NotBlank String title,
         List<String> labels,
         @NotNull JsonNode payload,
-        @NotNull String status
+        String status
 ) {
 }

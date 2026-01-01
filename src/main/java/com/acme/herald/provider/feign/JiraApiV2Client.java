@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "jiraV2", url = "${jira.baseUrl}/rest/api/2")
+@FeignClient(name = "jiraV2", url = "${jira.baseUrl}/rest/api/2", configuration = JiraFeignConfig.class)
 public interface JiraApiV2Client {
 
     @GetMapping(value = "/myself", consumes = MediaType.APPLICATION_JSON_VALUE)

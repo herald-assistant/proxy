@@ -25,26 +25,23 @@ public class TemplateService {
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
 
-        if (cfg.status().templateFlow().stream().noneMatch(s -> s.equals(req.status()))) {
+        if (req.status() != null && cfg.status().templateFlow().stream().noneMatch(s -> s.equals(req.status()))) {
             throw new IllegalArgumentException("Niepoprawny status template: " + req.status() + ". Dozwolone: " + cfg.status().templateFlow());
         }
 
         // pola issue
         var fields = new java.util.HashMap<String, Object>();
         fields.put("project", Map.of("key", jiraProps.getProjectKey()));
-        fields.put("summary", req.title());
         fields.put("issuetype", Map.of("name", issueTypes.template()));
-        fields.put(fieldsCfg.templateId(), req.template_id());
         fields.put("labels", req.labels() != null ? req.labels() : List.of());
+        fields.put(fieldsCfg.templateId(), req.template_id());
         fields.put(fieldsCfg.payload(), req.payload().toString());
         fields.put(fieldsCfg.templateStatus(), req.status());
 
-        // JQL: znajdź issue template po customfield templateId i braku caseId
-        String jql = "%s ~ \"%s\" AND %s is EMPTY"
+        String jql = "%s ~ \"%s\""
                 .formatted(
                         toJqlField(fieldsCfg.templateId()),
-                        escapeJql(req.template_id()),
-                        toJqlField(fieldsCfg.caseId())
+                        escapeJql(req.template_id())
                 );
 
         var existing = jira.search(jql, 0, 1);

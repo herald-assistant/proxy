@@ -30,21 +30,24 @@ public class CaseService {
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
 
-        if (cfg.status().caseFlow().stream().noneMatch(s -> s.equals(req.status()))) {
+        if (req.status() != null && cfg.status().caseFlow().stream().noneMatch(s -> s.equals(req.status()))) {
             throw new IllegalArgumentException("Niepoprawny status case: " + req.status() + ". Dozwolone: " + cfg.status().caseFlow());
         }
 
         // pola issue
         var fields = new HashMap<String, Object>();
-        fields.put("project", Map.of("key", jiraProps.getProjectKey()));
         fields.put("summary", ofNullable(req.summary()).orElse(""));
-        fields.put("description", ofNullable(req.description()).orElse(""));
+        fields.put("project", Map.of("key", jiraProps.getProjectKey()));
         fields.put("issuetype", Map.of("name", issueTypes.caseIssue()));
-        fields.put(fieldsCfg.caseId(), req.case_id());
-        fields.put(fieldsCfg.templateId(), req.template_id());
-        fields.put(fieldsCfg.payload(), req.payload().toString());
-        fields.put(fieldsCfg.casePayload(), req.casePayload());
         fields.put("labels", req.labels() != null ? req.labels() : List.of());
+        fields.put(fieldsCfg.caseId(), req.case_id());
+        fields.put(fieldsCfg.payload(), req.payload().toString());
+
+//        fields.put(fieldsCfg.templateId(), req.template_id());
+//        fields.put("summary", ofNullable(req.summary()).orElse(""));
+//        fields.put("description", ofNullable(req.description()).orElse(""));
+//        fields.put(fieldsCfg.casePayload(), req.description());
+
         if (fieldsCfg.caseStatus() != null && !fieldsCfg.caseStatus().isBlank()) {
             fields.put(fieldsCfg.caseStatus(), req.status());
         }

@@ -20,6 +20,7 @@ herald:
     cookie-name: herald_auth
     max-age-days: 30
     secret-b64: MOeBPzJq5YNy4v2f+3FIeh1bNOGwhEg/McianDiH1GU=
+    allowed-origins: http://localhost:4200
   llm:
     proxy:
       http-log:

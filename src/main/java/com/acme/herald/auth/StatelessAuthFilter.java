@@ -27,9 +27,9 @@ public class StatelessAuthFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest req) {
         String p = req.getRequestURI();
-        return p.startsWith("/proxy/auth/wrap")
-                || p.startsWith("/actuator")
-                || p.startsWith("/v3/api-docs");
+        return p.startsWith("/proxy/auth/wrap") || p.endsWith("/proxy/auth/wrap")
+                || p.startsWith("/actuator") || p.endsWith("/actuator")
+                || p.startsWith("/v3/api-docs") || p.endsWith("/v3/api-docs");
     }
 
     @Override
