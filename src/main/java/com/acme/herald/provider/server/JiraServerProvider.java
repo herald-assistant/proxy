@@ -1,7 +1,8 @@
 package com.acme.herald.provider.server;
 
+import com.acme.herald.auth.JiraAuthorization;
+import com.acme.herald.auth.StatelessAuthFilter;
 import com.acme.herald.auth.TokenPayload;
-import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.JiraModels.IssueRef;
 import com.acme.herald.domain.JiraModels.SearchResponse;
@@ -77,7 +78,7 @@ public class JiraServerProvider implements JiraProvider {
 
     @Override
     public void updateIssue(String issueKey, Map<String, Object> body) {
-        var tp = (TokenPayload) req.getAttribute("herald.currentAuth");
+        var tp = currentAuth();
         api.updateIssue(auth(tp), issueKey, body);
     }
 
@@ -201,7 +202,7 @@ public class JiraServerProvider implements JiraProvider {
     // ─────────────────────────────────────────
 
     private TokenPayload currentAuth() {
-        Object o = req.getAttribute("herald.currentAuth");
+        Object o = req.getAttribute(StatelessAuthFilter.ATTR_CURRENT_AUTH);
         if (!(o instanceof TokenPayload tp) || tp.token() == null || tp.token().isBlank()) {
             throw new IllegalStateException("Brak herald.currentAuth w request (TokenPayload).");
         }
@@ -210,6 +211,6 @@ public class JiraServerProvider implements JiraProvider {
 
 
     private String auth(TokenPayload tp) {
-        return "Bearer " + tp.token();
+        return JiraAuthorization.auth(tp);
     }
 }

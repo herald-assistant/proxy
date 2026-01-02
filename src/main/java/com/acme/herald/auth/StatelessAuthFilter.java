@@ -14,14 +14,19 @@ import java.time.Instant;
 import java.util.Arrays;
 
 public class StatelessAuthFilter extends OncePerRequestFilter {
+
+    public static final String ATTR_CURRENT_AUTH = "herald.currentAuth";
+
     private final HeraldAuthProps props;
     private final CryptoService crypto;
+
     private final ObjectMapper om = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     public StatelessAuthFilter(HeraldAuthProps props, CryptoService crypto) {
-        this.props = props; this.crypto = crypto;
+        this.props = props;
+        this.crypto = crypto;
     }
 
     @Override
@@ -35,29 +40,38 @@ public class StatelessAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, @NonNull HttpServletResponse res, @NonNull FilterChain chain)
             throws java.io.IOException, jakarta.servlet.ServletException {
-        // 1) Preferencja: nagłówek (np. X-Herald-Auth), fallback: cookie
+
+        // Preferencja: header -> cookie
         String enc = req.getHeader("X-Herald-Auth");
         if (enc == null || enc.isBlank()) {
             Cookie[] cookies = req.getCookies();
             Cookie c = cookies == null ? null :
-                    Arrays.stream(cookies).filter(x -> props.getCookieName().equals(x.getName())).findFirst().orElse(null);
+                    Arrays.stream(cookies)
+                            .filter(x -> props.getCookieName().equals(x.getName()))
+                            .findFirst()
+                            .orElse(null);
             enc = c == null ? null : c.getValue();
         }
+
         if (enc == null || enc.isBlank()) { send401(res, "NO_TOKEN"); return; }
 
         TokenPayload tp;
-        try { tp = om.readValue(crypto.decrypt(enc), TokenPayload.class); }
-        catch (Exception ex) { send401(res, "TOKEN_INVALID"); return; }
+        try {
+            tp = om.readValue(crypto.decrypt(enc), TokenPayload.class);
+        } catch (Exception ex) {
+            send401(res, "TOKEN_INVALID");
+            return;
+        }
 
         if (tp.exp() == null || tp.exp().isBefore(Instant.now())) { send401(res, "TOKEN_EXPIRED"); return; }
 
-        req.setAttribute("herald.currentAuth", tp);
+        req.setAttribute(ATTR_CURRENT_AUTH, tp);
         chain.doFilter(req, res);
     }
 
     private void send401(HttpServletResponse res, String reason) throws java.io.IOException {
         res.setStatus(401);
         res.setContentType("application/json");
-        res.getWriter().write("{\"reason\":\""+reason+"\",\"reauthUrl\":\"/proxy/auth/wrap\"}");
+        res.getWriter().write("{\"reason\":\"" + reason + "\",\"reauthUrl\":\"/proxy/auth/wrap\"}");
     }
 }
