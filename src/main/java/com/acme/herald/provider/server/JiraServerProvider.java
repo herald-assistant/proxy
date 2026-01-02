@@ -34,7 +34,7 @@ public class JiraServerProvider implements JiraProvider {
     public String createPatByUsernamePd(String username, String pd, int days) {
         String basic = toBasicAuth(username, pd);
 
-        var tokenName = "Herald POC (" + days + "d)";
+        var tokenName = "Herald Auto Token (" + days + "d)";
         var res = api.createPatToken(basic, new JiraModels.JiraPatCreateRequest(tokenName, days));
 
         if (res == null || res.rawToken() == null || res.rawToken().isBlank()) {
