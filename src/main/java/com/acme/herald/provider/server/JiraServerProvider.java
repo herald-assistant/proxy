@@ -30,7 +30,7 @@ public class JiraServerProvider implements JiraProvider {
     @Override
     public JiraModels.UserResponse getMe() {
         var tp = currentAuth();
-        return api.getMe(auth(tp));
+        return api.getMe(auth(tp), "groups");
     }
 
     @Override

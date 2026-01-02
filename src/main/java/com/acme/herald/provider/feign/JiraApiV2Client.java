@@ -14,7 +14,7 @@ import java.util.Map;
 public interface JiraApiV2Client {
 
     @GetMapping(value = "/myself", consumes = MediaType.APPLICATION_JSON_VALUE)
-    JiraModels.UserResponse getMe(@RequestHeader("Authorization") String auth);
+    JiraModels.UserResponse getMe(@RequestHeader("Authorization") String auth, @RequestParam("expand") String expand);
 
     @GetMapping(value = "/mypermissions", consumes = MediaType.APPLICATION_JSON_VALUE)
     JiraModels.PermissionsResponse myPermissions(

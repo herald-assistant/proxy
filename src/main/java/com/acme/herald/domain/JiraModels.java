@@ -1,11 +1,37 @@
 package com.acme.herald.domain;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 import java.util.Map;
 
 public class JiraModels {
-    public record UserResponse(String key, String name, String emailAddress, String displayName,
-                               Map<String, String> avatarUrls) {
+    public record UserResponse(
+            String key,
+            String name,
+            String emailAddress,
+            String displayName,
+            Map<String, String> avatarUrls,
+
+            Boolean active,
+            String timeZone,
+            String locale,
+
+            SimpleListWrapper groups
+    ) {
+    }
+
+    public record SimpleListWrapper(
+            Integer size,
+            @JsonProperty("max-results") Integer maxResults,
+            List<GroupItem> items
+    ) {
+    }
+
+    public record GroupItem(
+            String name,
+            String self
+    ) {
     }
 
     public record PermissionsResponse(
