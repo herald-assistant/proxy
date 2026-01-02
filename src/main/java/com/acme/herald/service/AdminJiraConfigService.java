@@ -49,7 +49,8 @@ public class AdminJiraConfigService {
                 normalizeFields(incoming.fields()),
                 normalizeLinks(incoming.links()),
                 normalizeOptions(incoming.options()),
-                normalizeStatus(incoming.status())
+                normalizeStatus(incoming.status()),
+                nz(incoming.userPrefsIssueKey())
         );
 
         validateStatusConfigOrThrow(out);
@@ -123,7 +124,8 @@ public class AdminJiraConfigService {
                 s.fields(),
                 s.links(),
                 s.options(),
-                s.status()
+                s.status(),
+                s.userPrefsIssueKey()
         );
     }
 
@@ -151,7 +153,8 @@ public class AdminJiraConfigService {
                 new JiraStatusDto(
                         List.of("todo", "in_progress", "done", "rejected"),
                         List.of("todo", "in_progress", "done", "rejected", "published")
-                )
+                ),
+                "" // userPrefsIssueKey
         );
     }
 
@@ -165,7 +168,8 @@ public class AdminJiraConfigService {
                 (s != null && s.fields() != null ? mergeFieldsWithDefaults(s.fields(), d.fields()) : d.fields()),
                 (s != null && s.links() != null ? s.links() : d.links()),
                 (s != null && s.options() != null ? s.options() : d.options()),
-                (s != null && s.status() != null ? mergeStatusWithDefaults(s.status(), d.status()) : d.status())
+                (s != null && s.status() != null ? mergeStatusWithDefaults(s.status(), d.status()) : d.status()),
+                pick(s != null ? s.userPrefsIssueKey() : null, d.userPrefsIssueKey())
         );
     }
 

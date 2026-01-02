@@ -14,7 +14,8 @@ public class JiraIntegrationDtos {
             JiraFieldsDto fields,
             JiraLinksDto links,
             JiraOptionsDto options,
-            JiraStatusDto status
+            JiraStatusDto status,
+            String userPrefsIssueKey
     ) {}
 
     public record JiraIssueTypesDto(
@@ -54,7 +55,8 @@ public class JiraIntegrationDtos {
             JiraFieldsDto fields,
             JiraLinksDto links,
             JiraOptionsDto options,
-            JiraStatusDto status
+            JiraStatusDto status,
+            String userPrefsIssueKey
     ) {}
 
     public record JiraStatusDto(

@@ -1,31 +1,30 @@
 package com.acme.herald.web;
 
-import com.acme.herald.config.JiraProperties;
-import com.acme.herald.domain.JiraModels;
-import com.acme.herald.provider.JiraProvider;
+import com.acme.herald.domain.dto.MeContextDtos;
+import com.acme.herald.service.MeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(path = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
 public class MeController {
-    private final JiraProvider jira;
-    private final JiraProperties jiraProps;
+    private final MeService service;
 
     @GetMapping("/context")
-    public MeContext context() {
-        var user = jira.getMe();
-        var perms = jira.getMyPermissions(jiraProps.getProjectKey(), null, null);
-        return new MeContext(user, jiraProps.getProjectKey(), perms.permissions());
+    public MeContextDtos.MeContext context() {
+        return service.context();
     }
 
-    public record MeContext(
-            JiraModels.UserResponse user,
-            String projectKey,
-            java.util.Map<String, JiraModels.PermissionEntry> permissions
-    ) {}
+    @GetMapping("/profile")
+    public MeContextDtos.UserProfilePrefs myProfile() {
+        return service.myProfile();
+    }
+
+    @PutMapping(value = "/profile", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public MeContextDtos.UserProfilePrefs updateProfile(@RequestBody @Valid MeContextDtos.UpdateUserProfilePrefs req) {
+        return service.updateProfile(req);
+    }
 }

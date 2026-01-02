@@ -24,7 +24,6 @@ import java.util.Map;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class JiraServerProvider implements JiraProvider {
     private final JiraApiV2Client api;
-    private final JiraProperties props;
     private final HttpServletRequest req;
     private final RestClient rest = RestClient.builder().build();
 
