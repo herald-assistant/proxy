@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+
 @Service
 @RequiredArgsConstructor
 public class TemplateService {
@@ -31,6 +33,7 @@ public class TemplateService {
 
         // pola issue
         var fields = new java.util.HashMap<String, Object>();
+        fields.put("summary", isNotBlank(req.title()) ? req.title() : req.template_id());
         fields.put("project", Map.of("key", jiraProps.getProjectKey()));
         fields.put("issuetype", Map.of("name", issueTypes.template()));
         fields.put("labels", req.labels() != null ? req.labels() : List.of());
