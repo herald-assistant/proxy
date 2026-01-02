@@ -10,13 +10,22 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "jiraV2", url = "${jira.baseUrl}/rest/api/2", configuration = JiraFeignConfig.class)
-public interface JiraApiV2Client {
 
-    @GetMapping(value = "/myself", consumes = MediaType.APPLICATION_JSON_VALUE)
+@FeignClient(name = "jiraV2", url = "${jira.baseUrl}", configuration = JiraFeignConfig.class)
+public interface JiraApiV2Client {
+    String REST_API_PREFIX = "/rest/api/2";
+    String REST_PAT_PREFIX = "/rest/pat/latest";
+
+    @PostMapping(value = REST_PAT_PREFIX + "/tokens", consumes = MediaType.APPLICATION_JSON_VALUE)
+    JiraModels.JiraPatCreateResponse createPatToken(
+            @RequestHeader("Authorization") String auth,
+            @RequestBody JiraModels.JiraPatCreateRequest body
+    );
+
+    @GetMapping(value = REST_API_PREFIX + "/myself", consumes = MediaType.APPLICATION_JSON_VALUE)
     JiraModels.UserResponse getMe(@RequestHeader("Authorization") String auth, @RequestParam("expand") String expand);
 
-    @GetMapping(value = "/mypermissions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = REST_API_PREFIX + "/mypermissions", consumes = MediaType.APPLICATION_JSON_VALUE)
     JiraModels.PermissionsResponse myPermissions(
             @RequestHeader("Authorization") String auth,
             @RequestParam(required = false) String projectKey,
@@ -24,14 +33,14 @@ public interface JiraApiV2Client {
             @RequestParam(required = false) String permissions
     );
 
-    @GetMapping("/project/{projectKey}/properties/{propertyKey}")
+    @GetMapping(REST_API_PREFIX + "/project/{projectKey}/properties/{propertyKey}")
     Map<String, Object> getProjectProperty(
             @RequestHeader("Authorization") String auth,
             @PathVariable("projectKey") String projectKey,
             @PathVariable("propertyKey") String propertyKey
     );
 
-    @PutMapping(value = "/project/{projectKey}/properties/{propertyKey}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = REST_API_PREFIX + "/project/{projectKey}/properties/{propertyKey}", consumes = MediaType.APPLICATION_JSON_VALUE)
     void setProjectProperty(
             @RequestHeader("Authorization") String auth,
             @PathVariable("projectKey") String projectKey,
@@ -39,32 +48,32 @@ public interface JiraApiV2Client {
             @RequestBody Object propertyValue
     );
 
-    @PostMapping(value = "/issue", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = REST_API_PREFIX + "/issue", consumes = MediaType.APPLICATION_JSON_VALUE)
     CreateIssueResponse createIssue(@RequestHeader("Authorization") String auth, @RequestBody Map<String, Object> body);
 
-    @GetMapping("/issue/{key}")
+    @GetMapping(REST_API_PREFIX + "/issue/{key}")
     Map<String, Object> getIssue(@RequestHeader("Authorization") String auth, @PathVariable String key, @RequestParam(required = false) String expand);
 
-    @PutMapping(value = "/issue/{key}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = REST_API_PREFIX + "/issue/{key}", consumes = MediaType.APPLICATION_JSON_VALUE)
     void updateIssue(@RequestHeader("Authorization") String auth, @PathVariable String key, @RequestBody Map<String, Object> body);
 
-    @PostMapping(value = "/issue/{key}/watchers", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = REST_API_PREFIX + "/issue/{key}/watchers", consumes = MediaType.APPLICATION_JSON_VALUE)
     void addWatcher(@RequestHeader("Authorization") String auth, @PathVariable String key, @RequestBody String usernameOrAccountId);
 
-    @PostMapping(value = "/issue/{key}/votes")
+    @PostMapping(value = REST_API_PREFIX + "/issue/{key}/votes")
     void addVote(@RequestHeader("Authorization") String auth, @PathVariable String key);
 
-    @DeleteMapping(value = "/issue/{key}/votes")
+    @DeleteMapping(value = REST_API_PREFIX + "/issue/{key}/votes")
     void removeVote(@RequestHeader("Authorization") String auth, @PathVariable String key);
 
-    @GetMapping("/search")
+    @GetMapping(REST_API_PREFIX + "/search")
     Map<String, Object> search(@RequestHeader("Authorization") String auth, @RequestParam String jql,
                                @RequestParam(defaultValue = "0") int startAt, @RequestParam(defaultValue = "50") int maxResults);
 
-    @PutMapping(value = "/issue/{key}/assignee", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = REST_API_PREFIX + "/issue/{key}/assignee", consumes = MediaType.APPLICATION_JSON_VALUE)
     void assignIssue(@RequestHeader("Authorization") String auth, @PathVariable String key, @RequestBody JiraModels.AssigneePayload payload);
 
-    @GetMapping(value = "/user/assignable/search", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = REST_API_PREFIX + "/user/assignable/search", consumes = MediaType.APPLICATION_JSON_VALUE)
     List<JiraModels.AssignableUser> findAssignableUsers(
             @RequestHeader("Authorization") String auth,
             @RequestParam(required = false) String issueKey,

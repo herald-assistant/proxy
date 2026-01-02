@@ -6,6 +6,12 @@ import java.util.List;
 import java.util.Map;
 
 public class JiraModels {
+    public record JiraPatCreateRequest(String name, int expirationDuration) {
+    }
+
+    public record JiraPatCreateResponse(Long id, String name, String rawToken, String expiringAt) {
+    }
+
     public record UserResponse(
             String key,
             String name,

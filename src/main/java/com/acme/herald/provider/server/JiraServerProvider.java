@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +29,26 @@ public class JiraServerProvider implements JiraProvider {
     private final JiraApiV2Client api;
     private final HttpServletRequest req;
     private final RestClient rest = RestClient.builder().build();
+
+    @Override
+    public String createPatByUsernamePd(String username, String pd, int days) {
+        String basic = toBasicAuth(username, pd);
+
+        var tokenName = "Herald POC (" + days + "d)";
+        var res = api.createPatToken(basic, new JiraModels.JiraPatCreateRequest(tokenName, days));
+
+        if (res == null || res.rawToken() == null || res.rawToken().isBlank()) {
+            throw new IllegalStateException("JIRA_PAT_NO_RAW_TOKEN");
+        }
+        return res.rawToken();
+    }
+
+    private static String toBasicAuth(String username, String pd) {
+        // UWAGA: nie loguj tego nigdzie
+        String raw = username + ":" + pd;
+        String b64 = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+        return "Basic " + b64;
+    }
 
     @Override
     public JiraModels.UserResponse getMe() {

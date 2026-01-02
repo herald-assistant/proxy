@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface JiraProvider {
+    String createPatByUsernamePd(String username, String pd, int days);
 
     JiraModels.UserResponse getMe();
 
