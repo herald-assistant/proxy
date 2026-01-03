@@ -4,6 +4,7 @@ import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.CreateCase;
 import com.acme.herald.domain.dto.RatingInput;
 import com.acme.herald.domain.dto.RatingResult;
+import com.acme.herald.web.dto.CommonDtos;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -22,25 +23,19 @@ public class CaseController {
     }
 
     @PostMapping("/{caseKey}/comments")
-    public ResponseEntity<Void> comment(@PathVariable String caseKey, @RequestBody CommentReq req) {
+    public ResponseEntity<Void> comment(@PathVariable String caseKey, @RequestBody CommonDtos.CommentReq req) {
         service.commentWithMentions(caseKey, req.text());
         return ResponseEntity.status(201).build();
     }
 
-    @PostMapping("/{caseKey}/vote")
-    public ResponseEntity<Void> vote(@PathVariable String caseKey, @RequestBody VoteReq req) {
-        service.vote(caseKey, req.up());
+    @PostMapping("/{issueKey}/like")
+    public ResponseEntity<Void> like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
+        service.like(issueKey, req.up());
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{caseKey}/rating")
     public ResponseEntity<RatingResult> rate(@PathVariable String caseKey, @RequestBody RatingInput req) {
         return ResponseEntity.ok(service.rate(caseKey, req));
-    }
-
-    public record CommentReq(String text) {
-    }
-
-    public record VoteReq(boolean up) {
     }
 }

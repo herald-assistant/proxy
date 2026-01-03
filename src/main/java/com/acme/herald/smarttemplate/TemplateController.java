@@ -2,14 +2,12 @@ package com.acme.herald.smarttemplate;
 
 import com.acme.herald.domain.dto.CreateTemplate;
 import com.acme.herald.domain.dto.TemplateRef;
+import com.acme.herald.web.dto.CommonDtos;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(path = "/templates", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -23,4 +21,8 @@ public class TemplateController {
         return ResponseEntity.status(201).body(ref);
     }
 
+    @PostMapping("/{issueKey}/like")
+    public ResponseEntity<Void> like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
+        return service.like(issueKey, req);
+    }
 }

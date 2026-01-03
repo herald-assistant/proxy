@@ -77,8 +77,8 @@ public class CaseService {
         jira.addComment(caseKey, text);
     }
 
-    public void vote(String caseKey, boolean up) {
-        jira.setVote(caseKey, up);
+    public void like(String issueKey, boolean up) {
+        jira.setVote(issueKey, up);
     }
 
     public RatingResult rate(String caseKey, RatingInput rating) {

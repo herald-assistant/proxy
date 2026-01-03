@@ -5,8 +5,13 @@ import com.acme.herald.domain.dto.CreateTemplate;
 import com.acme.herald.domain.dto.TemplateRef;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.config.AdminJiraConfigService;
+import com.acme.herald.web.dto.CommonDtos;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 import java.util.Map;
@@ -60,6 +65,12 @@ public class TemplateService {
 
         String url = jiraProps.getBaseUrl() + "/browse/" + issueKey;
         return new TemplateRef(issueKey, url);
+    }
+
+    @PostMapping("/{issueKey}/vote")
+    public ResponseEntity<Void> like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
+        jira.setVote(issueKey, req.up());
+        return ResponseEntity.noContent().build();
     }
 
     // ───────────────── helpers ─────────────────

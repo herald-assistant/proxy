@@ -27,7 +27,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
-public class JiraServerProvider implements JiraProvider {
+class JiraServerProvider implements JiraProvider {
     private final JiraApiV2Client api;
     private final HttpServletRequest req;
     private final RestClient rest = RestClient.builder().build();
