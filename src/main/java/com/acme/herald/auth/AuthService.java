@@ -1,10 +1,6 @@
-package com.acme.herald.service;
+package com.acme.herald.auth;
 
-import com.acme.herald.auth.CryptoService;
-import com.acme.herald.auth.HeraldAuthProps;
-import com.acme.herald.auth.TokenPayload;
 import com.acme.herald.provider.JiraProvider;
-import com.acme.herald.web.admin.AuthDtos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;

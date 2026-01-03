@@ -1,4 +1,4 @@
-package com.acme.herald.web.admin;
+package com.acme.herald.auth;
 
 import java.time.Instant;
 

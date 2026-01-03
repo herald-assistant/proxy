@@ -1,7 +1,5 @@
-package com.acme.herald.web;
+package com.acme.herald.auth;
 
-import com.acme.herald.service.AuthService;
-import com.acme.herald.web.admin.AuthDtos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
