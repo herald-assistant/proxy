@@ -22,6 +22,12 @@ public interface JiraApiV2Client {
             @RequestBody JiraModels.JiraPatCreateRequest body
     );
 
+    @DeleteMapping(value = REST_PAT_PREFIX + "/tokens/{id}")
+    void revokePatToken(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable("id") Long id
+    );
+
     @GetMapping(value = REST_API_PREFIX + "/myself", consumes = MediaType.APPLICATION_JSON_VALUE)
     JiraModels.UserResponse getMe(@RequestHeader("Authorization") String auth, @RequestParam("expand") String expand);
 

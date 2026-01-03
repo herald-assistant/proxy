@@ -1,6 +1,7 @@
 // package com.acme.herald.provider;
 package com.acme.herald.provider;
 
+import com.acme.herald.auth.TokenPayload;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.JiraModels.IssueRef;
 import com.acme.herald.domain.JiraModels.SearchResponse;
@@ -10,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 
 public interface JiraProvider {
-    String createPatByUsernamePd(String username, String pd, int days);
+    TokenPayload createPatByUsernamePdWithMeta(String username, String pd, int days);
+
+    void revokeCurrentPat();
 
     JiraModels.UserResponse getMe();
 

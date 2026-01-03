@@ -18,6 +18,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -31,16 +33,32 @@ public class JiraServerProvider implements JiraProvider {
     private final RestClient rest = RestClient.builder().build();
 
     @Override
-    public String createPatByUsernamePd(String username, String pd, int days) {
+    public TokenPayload createPatByUsernamePdWithMeta(String username, String pd, int days) {
         String basic = toBasicAuth(username, pd);
 
         var tokenName = "Herald Auto Token (" + days + "d)";
-        var res = api.createPatToken(basic, new JiraModels.JiraPatCreateRequest(tokenName, days));
+        JiraModels.JiraPatCreateResponse res =
+                api.createPatToken(basic, new JiraModels.JiraPatCreateRequest(tokenName, days));
 
         if (res == null || res.rawToken() == null || res.rawToken().isBlank()) {
             throw new IllegalStateException("JIRA_PAT_NO_RAW_TOKEN");
         }
-        return res.rawToken();
+        if (res.id() == null) {
+            throw new IllegalStateException("JIRA_PAT_NO_ID");
+        }
+
+        return new TokenPayload(res.rawToken(), Instant.now().plus(Duration.ofDays(days)), res.id());
+    }
+
+    @Override
+    public void revokeCurrentPat() {
+        var tp = currentAuth();
+
+        if (tp.patId() == null) {
+            return;
+        }
+
+        api.revokePatToken(auth(tp), tp.patId());
     }
 
     private static String toBasicAuth(String username, String pd) {
