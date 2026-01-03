@@ -2,28 +2,33 @@ package com.acme.herald.smartcase;
 
 import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.config.JiraProperties;
+import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.CreateCase;
 import com.acme.herald.domain.dto.RatingInput;
 import com.acme.herald.domain.dto.RatingResult;
 import com.acme.herald.provider.JiraProvider;
+import com.acme.herald.web.JqlUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.acme.herald.smartcase.LinkService.looksLikeIssueLinksNotAllowed;
+import static com.acme.herald.smartcase.LinkService.safeMsg;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CaseService {
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
     private final AdminJiraConfigService jiraAdminCfg;
+    private final LinkService linkService;
 
     public CaseRef upsertCase(CreateCase req) {
         var cfg = jiraAdminCfg.getForRuntime();
@@ -52,25 +57,53 @@ public class CaseService {
             fields.put(fieldsCfg.caseStatus(), req.status());
         }
 
-        String jql = "%s ~ \"%s\""
+        String jql = "project = %s AND %s ~ \"%s\" AND issuetype = \"%s\""
                 .formatted(
-                        toJqlField(fieldsCfg.caseId()),
-                        escapeJql(req.case_id())
+                        cfg.projectKey(),
+                        JqlUtils.toJqlField(fieldsCfg.caseId()),
+                        JqlUtils.escapeJql(req.case_id()),
+                        JqlUtils.escapeJql(cfg.issueTypes().template())
                 );
 
         var existing = jira.search(jql, 0, 1);
 
-        String issueKey;
+        String caseKey;
+
         if (existing.total() == 0) {
-            issueKey = jira.createIssue(Map.of("fields", fields)).key();
+            // CREATE
+            Map<String, Object> createBody = new HashMap<>();
+            createBody.put("fields", fields);
+
+
+            LinkService.TemplateLinkInfo linkInfo = linkService.resolveTemplateLinkInfo(req);
+            if (linkInfo.isLinkable()) {
+                createBody.put("update", linkService.updateRelatedLinkBody(linkInfo));
+            }
+
+            try {
+                caseKey = jira.createIssue(createBody).key();
+            } catch (RuntimeException e) {
+                if (linkInfo.isLinkable() && looksLikeIssueLinksNotAllowed(e)) {
+                    log.warn("Create with update.issuelinks failed; falling back to create+issueLink. {}", safeMsg(e));
+                    caseKey = jira.createIssue(Map.of("fields", fields)).key();
+                    linkService.safeCreateLinkFallback(linkInfo, caseKey);
+                } else {
+                    throw e;
+                }
+            }
+
+            if (linkInfo.isLinkable()) {
+                linkService.ensureLinked(linkInfo, caseKey);
+            }
+
         } else {
+            // UPDATE
             Map<String, Object> issue = existing.issues().stream().findAny().orElseThrow();
-            issueKey = String.valueOf(issue.get("key"));
-            jira.updateIssue(issueKey, Map.of("fields", fields));
+            caseKey = String.valueOf(issue.get("key"));
+            jira.updateIssue(caseKey, Map.of("fields", fields));
         }
 
-        var url = jiraProps.getBaseUrl() + "/browse/" + issueKey;
-        return new CaseRef(issueKey, url);
+        return new CaseRef(caseKey);
     }
 
     public void commentWithMentions(String caseKey, String text) {
@@ -89,21 +122,5 @@ public class CaseService {
         Map<String, Object> body = Map.of("fields", Map.of(ratingField, avg));
         jira.updateIssue(caseKey, body);
         return new RatingResult(avg);
-    }
-
-    // ───────────────── helpers ─────────────────
-
-    private static final Pattern CUSTOMFIELD = Pattern.compile("^customfield_(\\d+)$");
-
-    static String toJqlField(String fieldIdOrName) {
-        String f = fieldIdOrName == null ? "" : fieldIdOrName.trim();
-        Matcher m = CUSTOMFIELD.matcher(f);
-        if (m.matches()) return "cf[" + m.group(1) + "]";
-        return f;
-    }
-
-    static String escapeJql(String s) {
-        if (s == null) return "";
-        return s.replace("\"", "\\\"");
     }
 }

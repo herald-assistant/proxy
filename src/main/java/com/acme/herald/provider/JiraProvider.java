@@ -66,4 +66,6 @@ public interface JiraProvider {
     Map<String, Object> getIssueProperty(String issueKey, String propertyKey);
 
     void setIssueProperty(String issueKey, String propertyKey, Object propertyValue);
+
+    void createIssueLink(String linkTypeName, String issueKey, String caseKey);
 }

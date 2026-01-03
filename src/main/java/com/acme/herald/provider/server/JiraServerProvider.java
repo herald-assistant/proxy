@@ -212,6 +212,19 @@ class JiraServerProvider implements JiraProvider {
         api.setIssueProperty(auth(tp), issueKey, propertyKey, propertyValue);
     }
 
+    @Override
+    public void createIssueLink(String linkTypeName, String inwardIssueKey, String outwardIssueKey) {
+        var tp = currentAuth();
+
+        Map<String, Object> body = Map.of(
+                "type", Map.of("name", linkTypeName),
+                "inwardIssue", Map.of("key", inwardIssueKey),
+                "outwardIssue", Map.of("key", outwardIssueKey)
+        );
+
+        api.createIssueLink(auth(tp), body);
+    }
+
     // ───── KOMENTARZE ─────
 
     @Override

@@ -167,4 +167,8 @@ public interface JiraApiV2Client {
             @PathVariable("key") String issueKey,
             @PathVariable("id") String commentId
     );
+
+    @PostMapping("/rest/api/2/issueLink")
+    void createIssueLink(@RequestHeader("Authorization") String auth,
+                         @RequestBody Map<String, Object> body);
 }

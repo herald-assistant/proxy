@@ -1,10 +1,11 @@
 package com.acme.herald.smarttemplate;
 
+import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.dto.CreateTemplate;
 import com.acme.herald.domain.dto.TemplateRef;
 import com.acme.herald.provider.JiraProvider;
-import com.acme.herald.config.AdminJiraConfigService;
+import com.acme.herald.web.JqlUtils;
 import com.acme.herald.web.dto.CommonDtos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
@@ -48,8 +47,8 @@ public class TemplateService {
 
         String jql = "%s ~ \"%s\""
                 .formatted(
-                        toJqlField(fieldsCfg.templateId()),
-                        escapeJql(req.template_id())
+                        JqlUtils.toJqlField(fieldsCfg.templateId()),
+                        JqlUtils.escapeJql(req.template_id())
                 );
 
         var existing = jira.search(jql, 0, 1);
@@ -71,22 +70,5 @@ public class TemplateService {
     public ResponseEntity<Void> like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
         jira.setVote(issueKey, req.up());
         return ResponseEntity.noContent().build();
-    }
-
-    // ───────────────── helpers ─────────────────
-
-    private static final Pattern CUSTOMFIELD = Pattern.compile("^customfield_(\\d+)$");
-
-    /** "customfield_10112" -> "cf[10112]" (bezpieczne w JQL), inne -> zwraca bez zmian */
-    static String toJqlField(String fieldIdOrName) {
-        String f = fieldIdOrName == null ? "" : fieldIdOrName.trim();
-        Matcher m = CUSTOMFIELD.matcher(f);
-        if (m.matches()) return "cf[" + m.group(1) + "]";
-        return f;
-    }
-
-    static String escapeJql(String s) {
-        if (s == null) return "";
-        return s.replace("\"", "\\\"");
     }
 }
