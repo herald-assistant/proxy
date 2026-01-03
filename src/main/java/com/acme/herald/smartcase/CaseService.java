@@ -62,7 +62,7 @@ public class CaseService {
                         cfg.projectKey(),
                         JqlUtils.toJqlField(fieldsCfg.caseId()),
                         JqlUtils.escapeJql(req.case_id()),
-                        JqlUtils.escapeJql(cfg.issueTypes().template())
+                        JqlUtils.escapeJql(cfg.issueTypes().caseIssue())
                 );
 
         var existing = jira.search(jql, 0, 1);
