@@ -2,7 +2,6 @@ package com.acme.herald.smartcase;
 
 import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.config.JiraProperties;
-import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.CreateCase;
 import com.acme.herald.domain.dto.RatingInput;
@@ -13,9 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static com.acme.herald.smartcase.LinkService.looksLikeIssueLinksNotAllowed;
 import static com.acme.herald.smartcase.LinkService.safeMsg;

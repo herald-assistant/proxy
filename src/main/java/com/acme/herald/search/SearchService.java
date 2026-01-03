@@ -13,8 +13,7 @@ import java.util.Map;
 public class SearchService {
     private final JiraProvider jira;
 
-    public SearchResult search(String q, int limit) {
-        String jql = translateQToJql(q);
+    public SearchResult search(String jql, int limit) {
         var resp = jira.search(jql, 0, limit);
         var items = resp.issues().stream().map(i -> {
             String key = (String) i.get("key");
@@ -22,11 +21,5 @@ public class SearchService {
             return new SearchItem(key, fields);
         }).toList();
         return new SearchResult(items);
-    }
-
-    private String translateQToJql(String q) {
-        if (q == null || q.isBlank())
-            return "project = " + "HRLD"; // Minimalny parser: "template_id:XYZ AND status:Open"
-        return q.replace("template_id:", "\"herald_template_id\" ~ ").replace("status:", "status = ");
     }
 }
