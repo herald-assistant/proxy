@@ -4,7 +4,7 @@ import com.acme.herald.auth.CryptoService;
 import com.acme.herald.domain.ChatDtos;
 import com.acme.herald.config.LlmIntegrationDtos.*;
 import com.acme.herald.config.AdminLlmConfigService;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -77,6 +77,7 @@ public class LlmProxyService {
         payload.put("model", upstreamModelName);
         payload.put("messages", req.messages());
         payload.put("stream", false);
+
         if (temperature != null) payload.put("temperature", temperature);
         if (maxTokens != null) payload.put("max_tokens", maxTokens);
 
@@ -147,7 +148,7 @@ public class LlmProxyService {
         if (exceptionBody == null || exceptionBody.isBlank()) return null;
 
         try {
-            JsonNode root = objectMapper.readTree(exceptionBody);
+            JsonNode root = objectMapper.readValue(exceptionBody, JsonNode.class);
             JsonNode err = root.path("error");
             String code = err.path("code").asText("");
             String param = err.path("param").asText("");

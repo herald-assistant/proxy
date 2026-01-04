@@ -26,7 +26,7 @@ public class TemplateController {
     )
     public ResponseEntity<TemplateRef> upsert(@RequestBody @Valid UpsertTemplate req) {
         var ref = service.upsertTemplate(req);
-        return ResponseEntity.status(201).body(ref);
+        return ResponseEntity.ok(ref);
     }
 
     @PutMapping(path = "/{issueKey}/like", consumes = MediaType.APPLICATION_JSON_VALUE)

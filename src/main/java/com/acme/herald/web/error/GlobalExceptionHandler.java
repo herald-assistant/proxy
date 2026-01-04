@@ -2,6 +2,7 @@ package com.acme.herald.web;
 
 import com.acme.herald.web.dto.CommonDtos;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -11,11 +12,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public CommonDtos.ApiError handleValidation(MethodArgumentNotValidException e) {
+        log.error("MethodArgumentNotValidException", e);
         List<CommonDtos.FieldError> fields = e.getBindingResult().getFieldErrors().stream()
                 .map(this::toFieldError)
                 .toList();
@@ -31,6 +34,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(IllegalArgumentException.class)
     public CommonDtos.ApiError handleIllegalArg(IllegalArgumentException e) {
+        log.error("IllegalArgumentException", e);
         return new CommonDtos.ApiError(
                 "BAD_REQUEST",
                 e.getMessage(),
@@ -42,6 +46,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     @ExceptionHandler(AccessDeniedException.class)
     public CommonDtos.ApiError handleForbidden(AccessDeniedException e) {
+        log.error("AccessDeniedException", e);
         return new CommonDtos.ApiError(
                 "FORBIDDEN",
                 "Brak uprawnień.",
@@ -53,6 +58,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Throwable.class)
     public CommonDtos.ApiError handleAny(Throwable e, HttpServletRequest req) {
+        log.error("Throwable", e);
         // tu nie wypluwaj szczegółów w prod; loguj po swojej stronie
         return new CommonDtos.ApiError(
                 "INTERNAL_ERROR",

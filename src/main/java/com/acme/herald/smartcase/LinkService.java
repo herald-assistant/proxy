@@ -24,7 +24,7 @@ public class LinkService {
     TemplateLinkInfo resolveTemplateLinkInfo(UpsertCase req) {
         var cfg = jiraAdminCfg.getForRuntime();
 
-        if (req.template_id() == null || req.template_id().isBlank()) {
+        if (req.templateId() == null || req.templateId().isBlank()) {
             return new TemplateLinkInfo(null, null);
         }
 
@@ -38,7 +38,7 @@ public class LinkService {
                         cfg.projectKey(),
                         JqlUtils.escapeJql(cfg.issueTypes().template()),
                         JqlUtils.toJqlField(cfg.fields().templateId()),
-                        JqlUtils.escapeJql(req.template_id())
+                        JqlUtils.escapeJql(req.templateId())
                 );
 
         JiraModels.SearchResponse search = jira.search(jql, 0, 1);

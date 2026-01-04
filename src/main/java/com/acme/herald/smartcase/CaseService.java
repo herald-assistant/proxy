@@ -4,8 +4,6 @@ import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.UpsertCase;
-import com.acme.herald.domain.dto.RatingInput;
-import com.acme.herald.domain.dto.RatingResult;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.JqlUtils;
 import lombok.RequiredArgsConstructor;
@@ -40,11 +38,11 @@ public class CaseService {
 
         // pola issue
         var fields = new HashMap<String, Object>();
-        fields.put("summary", isNotBlank(req.summary()) ? req.summary() : req.case_id());
+        fields.put("summary", isNotBlank(req.summary()) ? req.summary() : req.caseId());
         fields.put("project", Map.of("key", jiraProps.getProjectKey()));
         fields.put("issuetype", Map.of("name", issueTypes.caseIssue()));
         fields.put("labels", req.labels() != null ? req.labels() : List.of());
-        fields.put(fieldsCfg.caseId(), req.case_id());
+        fields.put(fieldsCfg.caseId(), req.caseId());
         fields.put(fieldsCfg.payload(), req.payload().toString());
 
 //        fields.put(fieldsCfg.templateId(), req.template_id());
@@ -60,7 +58,7 @@ public class CaseService {
                 .formatted(
                         cfg.projectKey(),
                         JqlUtils.toJqlField(fieldsCfg.caseId()),
-                        JqlUtils.escapeJql(req.case_id()),
+                        JqlUtils.escapeJql(req.caseId()),
                         JqlUtils.escapeJql(cfg.issueTypes().caseIssue())
                 );
 
