@@ -1,5 +1,6 @@
 package com.acme.herald.provider;
 
+import com.acme.herald.assignee.dto.AssigneeDtos;
 import com.acme.herald.auth.TokenPayload;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.JiraModels.IssueRef;
@@ -29,7 +30,7 @@ public interface JiraProvider {
 
     SearchResponse search(String jql, int startAt, int maxResults);
 
-    void assignIssue(String key, JiraModels.AssigneePayload payload);
+    void assignIssue(String key, AssigneeDtos.AssigneeReq payload);
     List<JiraModels.AssignableUser> findAssignableUsers(String issueKey, String projectKey, String query, int startAt, int maxResults);
 
     JiraModels.Attachment attachAndReturnMeta(String issueKey, MultipartFile file);

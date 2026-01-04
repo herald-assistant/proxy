@@ -1,5 +1,6 @@
 package com.acme.herald.provider.server;
 
+import com.acme.herald.assignee.dto.AssigneeDtos;
 import com.acme.herald.auth.JiraAuthorization;
 import com.acme.herald.auth.StatelessAuthFilter;
 import com.acme.herald.auth.TokenPayload;
@@ -187,9 +188,9 @@ class JiraServerProvider implements JiraProvider {
     }
 
     @Override
-    public void assignIssue(String key, JiraModels.AssigneePayload payload) {
+    public void assignIssue(String key, AssigneeDtos.AssigneeReq payload) {
         var tp = currentAuth();
-        api.assignIssue(auth(tp), key, payload);
+        api.assignIssue(auth(tp), key, new JiraModels.AssigneePayload(payload.name(), payload.key()));
     }
 
     @Override

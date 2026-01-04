@@ -83,9 +83,6 @@ public class JiraModels {
     ) {
     }
 
-    public record AssignableUserList(List<AssignableUser> users) {
-    }
-
     public record Attachment(
             String id,
             String self,
