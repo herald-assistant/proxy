@@ -22,7 +22,7 @@ public class CaseController {
 
     @PutMapping("/{issueKey}/like")
     public ResponseEntity<Void> like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
-        service.like(issueKey, req.up());
+        service.like(issueKey, req.liked());
         return ResponseEntity.noContent().build();
     }
 }

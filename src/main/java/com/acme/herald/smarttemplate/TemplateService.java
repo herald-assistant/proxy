@@ -37,18 +37,18 @@ public class TemplateService {
 
         // pola issue
         var fields = new java.util.HashMap<String, Object>();
-        fields.put("summary", isNotBlank(req.title()) ? req.title() : req.template_id());
+        fields.put("summary", isNotBlank(req.title()) ? req.title() : req.templateId());
         fields.put("project", Map.of("key", jiraProps.getProjectKey()));
         fields.put("issuetype", Map.of("name", issueTypes.template()));
         fields.put("labels", req.labels() != null ? req.labels() : List.of());
-        fields.put(fieldsCfg.templateId(), req.template_id());
+        fields.put(fieldsCfg.templateId(), req.templateId());
         fields.put(fieldsCfg.payload(), req.payload().toString());
         fields.put(fieldsCfg.templateStatus(), req.status());
 
         String jql = "%s ~ \"%s\""
                 .formatted(
                         JqlUtils.toJqlField(fieldsCfg.templateId()),
-                        JqlUtils.escapeJql(req.template_id())
+                        JqlUtils.escapeJql(req.templateId())
                 );
 
         var existing = jira.search(jql, 0, 1);
@@ -66,9 +66,7 @@ public class TemplateService {
         return new TemplateRef(issueKey, url);
     }
 
-    @PostMapping("/{issueKey}/vote")
-    public ResponseEntity<Void> like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
-        jira.setVote(issueKey, req.up());
-        return ResponseEntity.noContent().build();
+    public void like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
+        jira.setVote(issueKey, req.liked());
     }
 }
