@@ -6,7 +6,7 @@ import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 
-public record CreateCase(
+public record UpsertCase(
         @NotBlank String case_id,
         String template_id,
         String summary,

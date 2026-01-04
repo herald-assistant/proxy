@@ -2,7 +2,7 @@ package com.acme.herald.smartcase;
 
 import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.domain.JiraModels;
-import com.acme.herald.domain.dto.CreateCase;
+import com.acme.herald.domain.dto.UpsertCase;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.JqlUtils;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class LinkService {
     private final JiraProvider jira;
     private final AdminJiraConfigService jiraAdminCfg;
 
-    TemplateLinkInfo resolveTemplateLinkInfo(CreateCase req) {
+    TemplateLinkInfo resolveTemplateLinkInfo(UpsertCase req) {
         var cfg = jiraAdminCfg.getForRuntime();
 
         if (req.template_id() == null || req.template_id().isBlank()) {

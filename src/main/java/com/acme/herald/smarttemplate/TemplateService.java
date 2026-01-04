@@ -2,7 +2,7 @@ package com.acme.herald.smarttemplate;
 
 import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.config.JiraProperties;
-import com.acme.herald.domain.dto.CreateTemplate;
+import com.acme.herald.domain.dto.UpsertTemplate;
 import com.acme.herald.domain.dto.TemplateRef;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.JqlUtils;
@@ -26,7 +26,7 @@ public class TemplateService {
     private final JiraProperties jiraProps;
     private final AdminJiraConfigService jiraAdminCfg;
 
-    public TemplateRef createTemplate(CreateTemplate req) {
+    public TemplateRef upsertTemplate(UpsertTemplate req) {
         var cfg = jiraAdminCfg.getForRuntime();
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();

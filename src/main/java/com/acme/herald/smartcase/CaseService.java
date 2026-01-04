@@ -3,7 +3,7 @@ package com.acme.herald.smartcase;
 import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.dto.CaseRef;
-import com.acme.herald.domain.dto.CreateCase;
+import com.acme.herald.domain.dto.UpsertCase;
 import com.acme.herald.domain.dto.RatingInput;
 import com.acme.herald.domain.dto.RatingResult;
 import com.acme.herald.provider.JiraProvider;
@@ -29,7 +29,7 @@ public class CaseService {
     private final AdminJiraConfigService jiraAdminCfg;
     private final LinkService linkService;
 
-    public CaseRef upsertCase(CreateCase req) {
+    public CaseRef upsertCase(UpsertCase req) {
         var cfg = jiraAdminCfg.getForRuntime();
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
@@ -105,21 +105,7 @@ public class CaseService {
         return new CaseRef(caseKey);
     }
 
-    public void commentWithMentions(String caseKey, String text) {
-        jira.addComment(caseKey, text);
-    }
-
     public void like(String issueKey, boolean up) {
         jira.setVote(issueKey, up);
-    }
-
-    public RatingResult rate(String caseKey, RatingInput rating) {
-        var cfg = jiraAdminCfg.getForRuntime();
-        var ratingField = cfg.fields().ratingAvg();
-
-        double avg = rating.categories().stream().mapToDouble(RatingInput.Category::value).average().orElse(0.0);
-        Map<String, Object> body = Map.of("fields", Map.of(ratingField, avg));
-        jira.updateIssue(caseKey, body);
-        return new RatingResult(avg);
     }
 }

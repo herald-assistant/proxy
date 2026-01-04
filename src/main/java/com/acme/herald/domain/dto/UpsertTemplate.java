@@ -6,7 +6,7 @@ import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 
-public record CreateTemplate(
+public record UpsertTemplate(
         @NotBlank String template_id,
         @NotBlank String title,
         List<String> labels,

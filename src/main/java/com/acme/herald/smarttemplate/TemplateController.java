@@ -1,6 +1,6 @@
 package com.acme.herald.smarttemplate;
 
-import com.acme.herald.domain.dto.CreateTemplate;
+import com.acme.herald.domain.dto.UpsertTemplate;
 import com.acme.herald.domain.dto.TemplateRef;
 import com.acme.herald.web.dto.CommonDtos;
 import jakarta.validation.Valid;
@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.*;
 public class TemplateController {
     private final TemplateService service;
 
-    @PostMapping
-    public ResponseEntity<TemplateRef> create(@RequestBody @Valid CreateTemplate req) {
-        var ref = service.createTemplate(req);
+    @PutMapping
+    public ResponseEntity<TemplateRef> upsert(@RequestBody @Valid UpsertTemplate req) {
+        var ref = service.upsertTemplate(req);
         return ResponseEntity.status(201).body(ref);
     }
 
-    @PostMapping("/{issueKey}/like")
+    @PutMapping("/{issueKey}/like")
     public ResponseEntity<Void> like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
         return service.like(issueKey, req);
     }
