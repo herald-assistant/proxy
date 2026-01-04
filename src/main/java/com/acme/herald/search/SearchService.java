@@ -13,8 +13,8 @@ import java.util.Map;
 public class SearchService {
     private final JiraProvider jira;
 
-    public SearchResult search(String jql, int limit) {
-        var resp = jira.search(jql, 0, limit);
+    public SearchResult search(String query, int limit) {
+        var resp = jira.search(query, 0, limit);
         var items = resp.issues().stream().map(i -> {
             String key = (String) i.get("key");
             Map<String, Object> fields = (Map<String, Object>) i.get("fields");
