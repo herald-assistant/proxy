@@ -5,14 +5,12 @@ import com.acme.herald.domain.ChatDtos;
 import com.acme.herald.config.LlmIntegrationDtos.*;
 import com.acme.herald.config.AdminLlmConfigService;
 import tools.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -26,9 +24,7 @@ public class LlmProxyService {
     private final RestClient rest;
     private final AdminLlmConfigService adminConfig;
     private final CryptoService crypto;
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private final JsonMapper jsonMapper;
 
     public ChatDtos.ProxyReply chat(ChatDtos.ChatRequest req) {
         ChatDtos.ChatResponse res = chatRaw(req);
@@ -148,7 +144,7 @@ public class LlmProxyService {
         if (exceptionBody == null || exceptionBody.isBlank()) return null;
 
         try {
-            JsonNode root = objectMapper.readValue(exceptionBody, JsonNode.class);
+            JsonNode root = jsonMapper.readValue(exceptionBody, JsonNode.class);
             JsonNode err = root.path("error");
             String code = err.path("code").asText("");
             String param = err.path("param").asText("");
@@ -168,9 +164,9 @@ public class LlmProxyService {
 
     private String decryptBearerOrThrow(LlmCatalogModelDto cfg) {
         String enc = cfg.token();
-        boolean set = Boolean.TRUE.equals(cfg.tokenSet());
+        boolean present = Boolean.TRUE.equals(cfg.tokenPresent());
 
-        if ((enc == null || enc.isBlank()) && set) {
+        if ((enc == null || enc.isBlank()) && present) {
             throw new IllegalStateException("Model '%s' ma tokenSet=true, ale brak token w konfiguracji".formatted(cfg.id()));
         }
         if (enc == null || enc.isBlank()) {

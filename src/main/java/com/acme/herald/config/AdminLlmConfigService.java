@@ -1,15 +1,17 @@
 package com.acme.herald.config;
 
 import com.acme.herald.auth.CryptoService;
+import com.acme.herald.config.LlmIntegrationDtos.LlmCatalogDto;
+import com.acme.herald.config.LlmIntegrationDtos.LlmCatalogModelDto;
+import com.acme.herald.config.LlmIntegrationDtos.StoredCatalog;
+import com.acme.herald.config.LlmIntegrationDtos.StoredModel;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.provider.JiraProvider;
-import com.acme.herald.config.LlmIntegrationDtos.*;
 import com.acme.herald.web.error.ForbiddenException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -23,9 +25,7 @@ public class AdminLlmConfigService {
 
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
-    private final ObjectMapper om  = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private final JsonMapper jsonMapper;
     private final CryptoService crypto;
 
     public LlmCatalogDto getCatalog() {
@@ -150,19 +150,26 @@ public class AdminLlmConfigService {
     }
 
     private StoredCatalog loadStored() {
-        Map<String, Object> resp = jira.getProjectProperty(jiraProps.getProjectKey(), PROP_KEY);
-        if (resp == null || !resp.containsKey("value")) {
+        JsonNode value = jira.getProjectProperty(jiraProps.getProjectKey(), PROP_KEY);
+
+        if (value == null || value.isMissingNode() || value.isNull()) {
             return new StoredCatalog(1, new ArrayList<>());
         }
-        Object value = resp.get("value");
-        return om.convertValue(value, StoredCatalog.class);
+
+        try {
+            return jsonMapper.convertValue(value, StoredCatalog.class);
+        } catch (Exception e) {
+            return new StoredCatalog(1, new ArrayList<>());
+        }
     }
 
     private void saveStored(StoredCatalog stored) {
         jira.setProjectProperty(jiraProps.getProjectKey(), PROP_KEY, stored);
     }
 
-    private static String nz(String s) { return s == null ? "" : s.trim(); }
+    private static String nz(String s) {
+        return s == null ? "" : s.trim();
+    }
 
     private static String blankToNull(String s) {
         if (s == null) return null;

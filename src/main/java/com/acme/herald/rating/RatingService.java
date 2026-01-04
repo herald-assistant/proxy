@@ -6,6 +6,8 @@ import com.acme.herald.domain.dto.RatingDtos.RatingIssueProperty;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.*;
 
@@ -13,6 +15,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class RatingService {
     private final JiraProvider jira;
+    private final JsonMapper jsonMapper;
 
     public RatingFetchRes fetch(String issueKey, String ratingId) {
         var me = jira.getMe();
@@ -52,17 +55,12 @@ public class RatingService {
 
     private RatingIssueProperty readProperty(String issueKey, String ratingId) {
         try {
-            Map<String, Object> resp = jira.getIssueProperty(issueKey, propertyKey(ratingId));
-            // Jira zwraca {"key":"...","value":{...}} – interesuje nas pole "value".
-            Object val = resp.get("value");
-            if (val instanceof Map valueMap) {
-                // prosta, bezpieczna deserializacja
-                @SuppressWarnings("unchecked")
-                Map<String, Object> m = valueMap;
-                String rId = (String) m.getOrDefault("ratingId", ratingId);
-                @SuppressWarnings("unchecked")
-                Map<String, Map<String, Integer>> votes =
-                        (Map<String, Map<String, Integer>>) m.getOrDefault("votes", Map.of());
+            JsonNode val = jira.getIssueProperty(issueKey, propertyKey(ratingId)); // <-- już "value"
+            if (val != null && val.isObject() && val.size() > 0) {
+                RatingIssueProperty p = jsonMapper.treeToValue(val, RatingIssueProperty.class);
+                // safety: jeśli ktoś zapisał null/blank ratingId w property
+                String rId = (p.ratingId() == null || p.ratingId().isBlank()) ? ratingId : p.ratingId();
+                Map<String, Map<String, Integer>> votes = (p.votes() == null) ? new HashMap<>() : new HashMap<>(p.votes());
                 return new RatingIssueProperty(rId, votes);
             }
         } catch (Exception ignored) {}

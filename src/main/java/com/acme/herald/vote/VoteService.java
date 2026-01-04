@@ -6,6 +6,8 @@ import com.acme.herald.domain.dto.VoteDtos;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -15,6 +17,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VoteService {
     private final JiraProvider jira;
+    private final JsonMapper jsonMapper;
 
     public VoteDtos.VoteFetchRes fetch(String issueKey, String voteId) {
         var me = jira.getMe();
@@ -56,19 +59,19 @@ public class VoteService {
 
     private VoteDtos.VoteIssueProperty readProperty(String issueKey, String voteId) {
         try {
-            Map<String, Object> resp = jira.getIssueProperty(issueKey, propertyKey(voteId));
-            Object val = resp.get("value"); // Jira: {"key": "...", "value": {...}}
-            if (val instanceof Map valueMap) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> m = valueMap;
-                String vId = (String) m.getOrDefault("voteId", voteId);
-                @SuppressWarnings("unchecked")
-                Map<String, String> votes = (Map<String, String>) m.getOrDefault("votes", Map.of());
+            JsonNode val = jira.getIssueProperty(issueKey, propertyKey(voteId)); // <-- już "value"
+            if (val != null && val.isObject() && val.size() > 0) {
+                VoteDtos.VoteIssueProperty p = jsonMapper.treeToValue(val, VoteDtos.VoteIssueProperty.class);
+
+                String vId = (p.voteId() == null || p.voteId().isBlank()) ? voteId : p.voteId();
+                Map<String, String> votes = (p.votes() == null) ? new HashMap<>() : new HashMap<>(p.votes());
+
                 return new VoteDtos.VoteIssueProperty(vId, votes);
             }
         } catch (Exception ignored) {}
         return new VoteDtos.VoteIssueProperty(voteId, new HashMap<>());
     }
+
 
     private String propertyKey(String voteId) {
         var safe = (voteId == null ? "unnamed" : voteId.toLowerCase(Locale.ROOT)

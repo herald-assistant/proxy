@@ -6,6 +6,7 @@ import com.acme.herald.domain.dto.CommentDtos;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
@@ -301,10 +302,9 @@ public class CommentService {
 
     private CommentDtos.PropertyValue readProperty(String issueKey) {
         try {
-            Map<String, Object> resp = jira.getIssueProperty(issueKey, PROPERTY_KEY);
-            Object val = resp.get("value");
-            if (val != null) {
-                return jsonMapper.convertValue(val, CommentDtos.PropertyValue.class);
+            JsonNode val = jira.getIssueProperty(issueKey, PROPERTY_KEY); // <-- już value
+            if (val != null && !val.isNull() && !val.isMissingNode() && !(val.isObject() && val.size() == 0)) {
+                return jsonMapper.treeToValue(val, CommentDtos.PropertyValue.class);
             }
         } catch (Exception ignored) {}
         return new CommentDtos.PropertyValue(List.of());

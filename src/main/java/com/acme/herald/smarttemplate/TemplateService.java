@@ -2,16 +2,15 @@ package com.acme.herald.smarttemplate;
 
 import com.acme.herald.config.AdminJiraConfigService;
 import com.acme.herald.config.JiraProperties;
-import com.acme.herald.domain.dto.UpsertTemplate;
+import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.TemplateRef;
+import com.acme.herald.domain.dto.UpsertTemplate;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.JqlUtils;
 import com.acme.herald.web.dto.CommonDtos;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
@@ -51,14 +50,17 @@ public class TemplateService {
                         JqlUtils.escapeJql(req.templateId())
                 );
 
-        var existing = jira.search(jql, 0, 1);
+        JiraModels.SearchResponse existing = jira.search(jql, 0, 1);
 
         String issueKey;
-        if (existing.total() == 0) {
+        if (existing.total() <= 0 || existing.issues() == null || existing.issues().isEmpty()) {
             issueKey = jira.createIssue(Map.of("fields", fields)).key();
         } else {
-            Map<String, Object> issue = existing.issues().stream().findAny().orElseThrow();
-            issueKey = String.valueOf(issue.get("key"));
+            var issue = existing.issues().getFirst();
+            issueKey = issue.path("key").asText(null);
+            if (!isNotBlank(issueKey)) {
+                throw new IllegalStateException("Jira search returned issue without key for jql: " + jql);
+            }
             jira.updateIssue(issueKey, Map.of("fields", fields));
         }
 

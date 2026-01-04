@@ -1,25 +1,34 @@
 package com.acme.herald.search;
 
+import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.SearchItem;
 import com.acme.herald.domain.dto.SearchResult;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class SearchService {
     private final JiraProvider jira;
 
-    public SearchResult search(String query, int limit) {
-        var resp = jira.search(query, 0, limit);
-        var items = resp.issues().stream().map(i -> {
-            String key = (String) i.get("key");
-            Map<String, Object> fields = (Map<String, Object>) i.get("fields");
-            return new SearchItem(key, fields);
-        }).toList();
+    public SearchResult search(String jql, int limit) {
+        JiraModels.SearchResponse resp = jira.search(jql, 0, limit);
+
+        List<SearchItem> items = new ArrayList<>();
+        var issues = resp.issues();
+        if (issues != null) {
+            for (var i : issues) {
+                String key = i.path("key").asText(null);
+                var fields = i.path("fields");
+                items.add(new SearchItem(key, fields));
+            }
+        }
+
         return new SearchResult(items);
     }
 }

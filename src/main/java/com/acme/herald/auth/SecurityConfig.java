@@ -10,12 +10,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final HeraldAuthProps authProps;
     private final CryptoService cryptoService;
+    private final JsonMapper jsonMapper;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) {
@@ -23,7 +25,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(reg -> reg
                         .requestMatchers("/**").permitAll())
-                .addFilterBefore(new StatelessAuthFilter(authProps, cryptoService), org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
+                .addFilterBefore(new StatelessAuthFilter(authProps, cryptoService, jsonMapper), org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
                 .build();
     }
 

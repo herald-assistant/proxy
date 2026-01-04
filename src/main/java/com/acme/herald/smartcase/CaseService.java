@@ -9,6 +9,7 @@ import com.acme.herald.web.JqlUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
 
 import java.util.HashMap;
 import java.util.List;
@@ -95,8 +96,8 @@ public class CaseService {
 
         } else {
             // UPDATE
-            Map<String, Object> issue = existing.issues().stream().findAny().orElseThrow();
-            caseKey = String.valueOf(issue.get("key"));
+            JsonNode issue = existing.issues().stream().findAny().orElseThrow();
+            caseKey = issue.get("key").asText(null);
             jira.updateIssue(caseKey, Map.of("fields", fields));
         }
 

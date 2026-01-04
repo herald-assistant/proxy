@@ -3,11 +3,10 @@ package com.acme.herald.config;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.error.ForbiddenException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -23,9 +22,7 @@ public class AdminJiraConfigService {
 
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
-    private final ObjectMapper om = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private final JsonMapper jsonMapper;
 
     private volatile JiraIntegrationConfigDto runtimeCache;
 
@@ -94,13 +91,14 @@ public class AdminJiraConfigService {
     }
 
     private StoredJiraIntegration loadStoredOrDefault() {
-        Map<String, Object> resp = jira.getProjectProperty(jiraProps.getProjectKey(), PROP_KEY);
-        if (resp == null || !resp.containsKey("value") || resp.get("value") == null) {
-            return defaultConfig();
-        }
-        Object value = resp.get("value");
         try {
-            StoredJiraIntegration stored = om.convertValue(value, StoredJiraIntegration.class);
+            JsonNode value = jira.getProjectProperty(jiraProps.getProjectKey(), PROP_KEY);
+
+            if (value == null || value.isNull() || value.isMissingNode()) {
+                return defaultConfig();
+            }
+
+            StoredJiraIntegration stored = jsonMapper.treeToValue(value, StoredJiraIntegration.class);
             return mergeWithDefaults(stored);
         } catch (Exception e) {
             return defaultConfig();

@@ -1,6 +1,7 @@
 package com.acme.herald.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,7 @@ public class JiraModels {
     public record CreateIssueResponse(String id, String key, String self) {
     }
 
-    public record SearchResponse(int startAt, int maxResults, int total, List<Map<String, Object>> issues) {
+    public record SearchResponse(int startAt, int maxResults, int total, List<JsonNode> issues) {
     }
 
     public record ChangelogItem(String field, String from, String to) {

@@ -1,11 +1,9 @@
 package com.acme.herald.auth;
 
 import com.acme.herald.provider.JiraProvider;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -16,10 +14,7 @@ public class AuthService {
     private final HeraldAuthProps props;
     private final CryptoService crypto;
     private final JiraProvider jira;
-
-    private final ObjectMapper om = new ObjectMapper()
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private final JsonMapper jsonMapper;
 
     public AuthDtos.WrapRes wrap(AuthDtos.WrapReq req) {
         int days = clampDays(req.ttlDays(), props.getMaxAgeDays());
@@ -43,7 +38,7 @@ public class AuthService {
 
     private AuthDtos.WrapRes encrypt(TokenPayload payload) {
         try {
-            byte[] json = om.writeValueAsBytes(payload);
+            byte[] json = jsonMapper.writeValueAsBytes(payload);
             String enc = crypto.encrypt(json);
             return new AuthDtos.WrapRes(enc, props.getCookieName(), payload.exp());
         } catch (Exception e) {

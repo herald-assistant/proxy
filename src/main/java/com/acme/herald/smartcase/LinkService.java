@@ -8,6 +8,7 @@ import com.acme.herald.web.JqlUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 import java.util.Map;
@@ -24,12 +25,18 @@ public class LinkService {
     TemplateLinkInfo resolveTemplateLinkInfo(UpsertCase req) {
         var cfg = jiraAdminCfg.getForRuntime();
 
-        if (req.templateId() == null || req.templateId().isBlank()) {
+        String templateId = req.templateId();
+        if (!isNotBlank(templateId)) {
             return new TemplateLinkInfo(null, null);
         }
 
-        String linkTypeName = cfg.links() != null ? (String) cfg.links().templateToCase() : null;
+        String linkTypeName = (cfg.links() != null) ? cfg.links().templateToCase() : null;
         if (!isNotBlank(linkTypeName)) {
+            return new TemplateLinkInfo(null, null);
+        }
+
+        String templateIdField = (cfg.fields() != null) ? cfg.fields().templateId() : null;
+        if (!isNotBlank(templateIdField)) {
             return new TemplateLinkInfo(null, null);
         }
 
@@ -37,17 +44,24 @@ public class LinkService {
                 .formatted(
                         cfg.projectKey(),
                         JqlUtils.escapeJql(cfg.issueTypes().template()),
-                        JqlUtils.toJqlField(cfg.fields().templateId()),
-                        JqlUtils.escapeJql(req.templateId())
+                        JqlUtils.toJqlField(templateIdField),
+                        JqlUtils.escapeJql(templateId)
                 );
 
         JiraModels.SearchResponse search = jira.search(jql, 0, 1);
-        if (search.total() <= 0 || search.issues() == null || search.issues().isEmpty()) {
+        if (search == null || search.total() <= 0) {
             return new TemplateLinkInfo(null, null);
         }
 
-        Map<String, Object> template = search.issues().getFirst();
-        String templateKey = (String) template.get("key");
+        List<JsonNode> issues = search.issues();
+        if (issues == null || issues.size() == 0) {
+            return new TemplateLinkInfo(null, null);
+        }
+
+        String templateKey = issues.get(0).path("key").asText(null);
+        if (!isNotBlank(templateKey)) {
+            return new TemplateLinkInfo(null, null);
+        }
 
         return new TemplateLinkInfo(templateKey, linkTypeName);
     }
@@ -93,26 +107,19 @@ public class LinkService {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private boolean isAlreadyLinked(String caseKey, String templateKey, String linkTypeName) {
         try {
-            Map<String, Object> issue = jira.getIssue(caseKey, null);
-            Map<String, Object> fields = (Map<String, Object>) issue.get("fields");
-            if (fields == null) return false;
+            JsonNode issue = jira.getIssue(caseKey, null);
 
-            List<Map<String, Object>> links = (List<Map<String, Object>>) fields.get("issuelinks");
-            if (links == null) return false;
+            JsonNode links = issue.path("fields").path("issuelinks");
+            if (!links.isArray()) return false;
 
-            for (Map<String, Object> l : links) {
-                Map<String, Object> type = (Map<String, Object>) l.get("type");
-                String name = type != null ? (String) type.get("name") : null;
+            for (JsonNode l : links) {
+                String name = l.path("type").path("name").asText(null);
                 if (!linkTypeName.equals(name)) continue;
 
-                Map<String, Object> inward = (Map<String, Object>) l.get("inwardIssue");
-                Map<String, Object> outward = (Map<String, Object>) l.get("outwardIssue");
-
-                String inKey = inward != null ? (String) inward.get("key") : null;
-                String outKey = outward != null ? (String) outward.get("key") : null;
+                String inKey = l.path("inwardIssue").path("key").asText(null);
+                String outKey = l.path("outwardIssue").path("key").asText(null);
 
                 if (templateKey.equals(inKey) || templateKey.equals(outKey)) return true;
             }

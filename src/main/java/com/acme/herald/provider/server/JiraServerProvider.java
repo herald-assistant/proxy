@@ -6,8 +6,11 @@ import com.acme.herald.auth.TokenPayload;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.JiraModels.IssueRef;
 import com.acme.herald.domain.JiraModels.SearchResponse;
+import com.acme.herald.domain.dto.SearchItem;
+import com.acme.herald.domain.dto.SearchResult;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.provider.feign.JiraApiV2Client;
+import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,10 +19,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +34,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 class JiraServerProvider implements JiraProvider {
+    private static final JsonNodeFactory NF = JsonNodeFactory.instance;
     private final JiraApiV2Client api;
     private final HttpServletRequest req;
     private final RestClient rest = RestClient.builder().build();
@@ -53,16 +60,11 @@ class JiraServerProvider implements JiraProvider {
     @Override
     public void revokeCurrentPat() {
         var tp = currentAuth();
-
-        if (tp.patId() == null) {
-            return;
-        }
-
+        if (tp.patId() == null) return;
         api.revokePatToken(auth(tp), tp.patId());
     }
 
     private static String toBasicAuth(String username, String pd) {
-        // UWAGA: nie loguj tego nigdzie
         String raw = username + ":" + pd;
         String b64 = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
         return "Basic " + b64;
@@ -86,14 +88,32 @@ class JiraServerProvider implements JiraProvider {
     }
 
     @Override
-    public Map<String, Object> getProjectProperty(String projectKey, String propertyKey) {
+    public JsonNode getIssueProperty(String issueKey, String propertyKey) {
         var tp = currentAuth();
         try {
-            return api.getProjectProperty(auth(tp), projectKey, propertyKey);
+            JsonNode raw = api.getIssueProperty(auth(tp), issueKey, propertyKey);
+            return unwrapPropertyValue(raw);
+        } catch (FeignException.NotFound e) {
+            return emptyObj();
         } catch (RuntimeException e) {
-            log.error("Exception during fetching ProjectProperty: " + projectKey + ", returning empty map" + e.getMessage());
-            // Jira: property nie istnieje => 404. Traktujemy jako "brak", a nie błąd.
-            return Map.of();
+            log.warn("Exception during fetching IssueProperty: {}, returning empty object. {}",
+                    propertyKey, e.getMessage());
+            return emptyObj();
+        }
+    }
+
+    @Override
+    public JsonNode getProjectProperty(String projectKey, String propertyKey) {
+        var tp = currentAuth();
+        try {
+            JsonNode raw = api.getProjectProperty(auth(tp), projectKey, propertyKey);
+            return unwrapPropertyValue(raw);
+        } catch (FeignException.NotFound e) {
+            return emptyObj();
+        } catch (RuntimeException e) {
+            log.warn("Exception during fetching ProjectProperty: {}, returning empty object. {}",
+                    propertyKey, e.getMessage());
+            return emptyObj();
         }
     }
 
@@ -111,10 +131,20 @@ class JiraServerProvider implements JiraProvider {
     }
 
     @Override
-    public Map<String, Object> getIssue(String issueKey, String expand) {
+    public JsonNode getIssue(String issueKey, String expand) {
         var tp = currentAuth();
-        return api.getIssue(auth(tp), issueKey, expand);
+        try {
+            JsonNode raw = api.getIssue(auth(tp), issueKey, expand);
+            return unwrapPropertyValue(raw);
+        } catch (FeignException.NotFound e) {
+            return emptyObj();
+        } catch (RuntimeException e) {
+            log.warn("Exception during fetching Issue: {}, returning empty object. {}",
+                    issueKey, e.getMessage());
+            return emptyObj();
+        }
     }
+
 
     @Override
     public void updateIssue(String issueKey, Map<String, Object> body) {
@@ -138,9 +168,22 @@ class JiraServerProvider implements JiraProvider {
     @Override
     public SearchResponse search(String jql, int startAt, int maxResults) {
         var tp = currentAuth();
-        var m = api.search(auth(tp), jql, startAt, maxResults);
-        var issues = (List<Map<String, Object>>) m.get("issues");
-        return new SearchResponse((int) m.get("startAt"), (int) m.get("maxResults"), (int) m.get("total"), issues);
+
+        JsonNode m = api.search(auth(tp), jql, startAt, maxResults);
+
+        int start = m.path("startAt").asInt(0);
+        int max = m.path("maxResults").asInt(0);
+        int total = m.path("total").asInt(0);
+
+        JsonNode issuesNode = m.path("issues");
+        List<JsonNode> issues = new ArrayList<>();
+        if (issuesNode != null && issuesNode.isArray()) {
+            for (JsonNode issue : issuesNode) {
+                issues.add(issue);
+            }
+        }
+
+        return new SearchResponse(start, max, total, List.copyOf(issues));
     }
 
     @Override
@@ -158,9 +201,7 @@ class JiraServerProvider implements JiraProvider {
     @Override
     public JiraModels.Attachment attachAndReturnMeta(String issueKey, MultipartFile file) {
         var tp = currentAuth();
-        // Jira Server/DC zwykle wymaga X-Atlassian-Token: no-check
         List<JiraModels.Attachment> list = api.attachAndReturnMeta(auth(tp), "no-check", issueKey, file);
-        // Jira zwraca listę załączników dodanych – nas interesuje pierwszy
         return list.getFirst();
     }
 
@@ -196,17 +237,6 @@ class JiraServerProvider implements JiraProvider {
     }
 
     @Override
-    public Map<String, Object> getIssueProperty(String issueKey, String propertyKey) {
-        var tp = currentAuth();
-        try {
-            return api.getIssueProperty(auth(tp), issueKey, propertyKey);
-        } catch (RuntimeException e) {
-            log.warn("Exception during fetching IssueProperty: " + propertyKey + ", returning empty map" + e.getMessage());
-            return Map.of();
-        }
-    }
-
-    @Override
     public void setIssueProperty(String issueKey, String propertyKey, Object propertyValue) {
         var tp = currentAuth();
         api.setIssueProperty(auth(tp), issueKey, propertyKey, propertyValue);
@@ -224,8 +254,6 @@ class JiraServerProvider implements JiraProvider {
 
         api.createIssueLink(auth(tp), body);
     }
-
-    // ───── KOMENTARZE ─────
 
     @Override
     public List<JiraModels.Comment> getComments(String issueKey) {
@@ -252,18 +280,33 @@ class JiraServerProvider implements JiraProvider {
         api.deleteComment(auth(tp), issueKey, commentId);
     }
 
-    // ─────────────────────────────────────────
-
     private TokenPayload currentAuth() {
         Object o = req.getAttribute(StatelessAuthFilter.ATTR_CURRENT_AUTH);
         if (!(o instanceof TokenPayload tp) || tp.token() == null || tp.token().isBlank()) {
-            throw new IllegalStateException("Brak herald.currentAuth w request (TokenPayload).");
+            throw new IllegalStateException("Missing herald.currentAuth in request (TokenPayload).");
         }
         return tp;
     }
 
+    private static JsonNode unwrapPropertyValue(JsonNode raw) {
+        if (raw == null || raw.isNull() || raw.isMissingNode()) return emptyObj();
+        JsonNode v = raw.get("value");
+        if (v != null && !v.isNull() && !v.isMissingNode()) return v;
+        // fallback: czasem możesz dostać już samą wartość
+        return raw;
+    }
+
+    private static JsonNode emptyObj() {
+        return NF.objectNode();
+    }
 
     private String auth(TokenPayload tp) {
         return JiraAuthorization.auth(tp);
+    }
+
+    private static String safeMsg(Throwable t) {
+        String m = t.getMessage();
+        if (m == null) return t.getClass().getSimpleName();
+        return m.length() > 400 ? m.substring(0, 400) + "…" : m;
     }
 }

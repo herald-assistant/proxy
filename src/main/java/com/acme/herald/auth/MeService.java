@@ -8,11 +8,12 @@ import com.acme.herald.provider.JiraProvider;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -22,6 +23,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 public class MeService {
 
     private static final String PROFILE_PREFIX = "herald.user-profile.v1.";
+    private static final JsonNodeFactory NF = JsonNodeFactory.instance;
 
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
@@ -53,6 +55,7 @@ public class MeService {
         var propKey = profilePropertyKey(user);
         var now = Instant.now().toString();
 
+        // request do Jiry: spokojnie może zostać Mapą (serialize -> JSON)
         var value = Map.<String, Object>of(
                 "version", 1,
                 "updatedAt", now,
@@ -75,35 +78,34 @@ public class MeService {
     private MeContextDtos.UserProfilePrefs loadProfilePrefs(JiraModels.UserResponse user) {
         var prefsIssueKey = getUserPrefsIssueKey();
         var propKey = profilePropertyKey(user);
-        Map<String, Object> m = new HashMap<>();
 
-        if (isNotBlank(prefsIssueKey)) {
-            Map<String, Object> raw = jira.getIssueProperty(prefsIssueKey, propKey);
-            m = unwrapJiraPropertyValue(raw);
-        }
-
-        if (m.isEmpty()) {
+        if (!isNotBlank(prefsIssueKey)) {
             return new MeContextDtos.UserProfilePrefs("", false, null);
         }
 
-        String desc = str(m.get("explainUserDescription"));
-        boolean notify = bool(m.get("notifyNewTemplates"));
-        String updatedAt = strOrNull(m.get("updatedAt"));
+        JsonNode v = jira.getIssueProperty(prefsIssueKey, propKey);
+
+        if (v == null || v.isMissingNode() || v.isNull() || (v.isObject() && v.size() == 0)) {
+            return new MeContextDtos.UserProfilePrefs("", false, null);
+        }
+
+        String desc = v.path("explainUserDescription").asText("");
+        boolean notify = bool(v.get("notifyNewTemplates"));
+        String updatedAt = strOrNull(v.get("updatedAt"));
 
         return new MeContextDtos.UserProfilePrefs(desc, notify, updatedAt);
     }
 
     /**
-     * Jira issue property response usually: { "key": "...", "value": { ... } }
-     * Ale bywa, że dostaniesz już samą wartość (np. mock / inne źródło).
+     * Jira issue property response zwykle: { "key": "...", "value": { ... } }
+     * Ale czasem możesz dostać już samą wartość.
      */
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> unwrapJiraPropertyValue(Map<String, Object> raw) {
-        if (raw == null || raw.isEmpty()) return Map.of();
+    private static JsonNode unwrapJiraPropertyValue(JsonNode raw) {
+        if (raw == null || raw.isMissingNode() || raw.isNull()) return NF.objectNode();
 
-        Object v = raw.get("value");
-        if (v instanceof Map<?, ?> vm) {
-            return (Map<String, Object>) vm;
+        JsonNode value = raw.get("value");
+        if (value != null && !value.isNull() && !value.isMissingNode()) {
+            return value;
         }
 
         // fallback: traktuj raw jako wartość
@@ -112,14 +114,11 @@ public class MeService {
 
     private String requireUserPrefsIssueKey() {
         String issueKey = getUserPrefsIssueKey();
-
         if (issueKey == null || issueKey.isBlank()) {
             throw new IllegalStateException("Missing userPrefsIssueKey in admin configuration.");
         }
-
         return issueKey.trim();
     }
-
 
     private String getUserPrefsIssueKey() {
         var cfg = jiraConfigService.getForRuntime();
@@ -140,20 +139,20 @@ public class MeService {
         return user.displayName() != null ? user.displayName() : "unknown";
     }
 
-    private static String str(Object o) {
-        return o == null ? "" : String.valueOf(o);
-    }
-
-    private static String strOrNull(Object o) {
-        if (o == null) return null;
-        String s = String.valueOf(o).trim();
+    private static String strOrNull(JsonNode n) {
+        if (n == null || n.isNull() || n.isMissingNode()) return null;
+        String s = n.asText(null);
+        if (s == null) return null;
+        s = s.trim();
         return s.isEmpty() ? null : s;
     }
 
-    private static boolean bool(Object o) {
-        if (o == null) return false;
-        if (o instanceof Boolean b) return b;
-        String s = String.valueOf(o).trim().toLowerCase();
-        return s.equals("true") || s.equals("1") || s.equals("yes");
+    private static boolean bool(JsonNode n) {
+        if (n == null || n.isNull() || n.isMissingNode()) return false;
+        if (n.isBoolean()) return n.booleanValue();
+
+        // Jira property bywa stringiem
+        String s = n.asText("").trim().toLowerCase();
+        return s.equals("true") || s.equals("1") || s.equals("yes") || s.equals("y") || s.equals("on");
     }
 }
