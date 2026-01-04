@@ -1,7 +1,7 @@
 package com.acme.herald.image;
 
 import com.acme.herald.config.AdminJiraConfigService;
-import com.acme.herald.domain.HeraldAttachmentDto;
+import com.acme.herald.domain.AttachmentDto;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -22,10 +22,9 @@ public class ImageService {
     private final JiraProvider jira;
     private final AdminJiraConfigService jiraAdminCfg;
 
-    public HeraldAttachmentDto upload(String issueKey, MultipartFile file) {
-        // (opcjonalnie) walidacja mime
+    public AttachmentDto upload(String issueKey, MultipartFile file) {
         if (file.getContentType() != null && !ALLOWED_MIME.contains(file.getContentType())) {
-            throw new IllegalArgumentException("Nieobsługiwany typ pliku: " + file.getContentType());
+            throw new IllegalArgumentException("Unsupported file type: " + file.getContentType());
         }
 
         var a = jira.attachAndReturnMeta(issueKey, file);
@@ -43,7 +42,7 @@ public class ImageService {
                 ? base + "/thumbnail"
                 : (a.thumbnail() != null && !a.thumbnail().isBlank() ? a.thumbnail() : null);
 
-        return new HeraldAttachmentDto(
+        return new AttachmentDto(
                 a.id(),
                 a.filename(),
                 a.size(),
