@@ -114,7 +114,7 @@ public class MeService {
         String issueKey = getUserPrefsIssueKey();
 
         if (issueKey == null || issueKey.isBlank()) {
-            throw new IllegalStateException("Brak userPrefsIssueKey w konfiguracji Jira (admin).");
+            throw new IllegalStateException("Missing userPrefsIssueKey in admin configuration.");
         }
 
         return issueKey.trim();

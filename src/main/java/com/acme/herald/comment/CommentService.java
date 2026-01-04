@@ -329,7 +329,7 @@ public class CommentService {
             var commentsApi = new ArrayList<CommentDtos.Comment>();
             for (CommentDtos.CommentMeta cm : t.comments()) {
                 var jc = byId.get(cm.jiraCommentId());
-                String text = jc != null ? jc.body() : "[komentarz JIRA niedostępny]";
+                String text = jc != null ? jc.body() : "[comment unavailable]";
                 String createdAt = cm.createdAt() != null
                         ? cm.createdAt()
                         : (jc != null ? jc.created() : null);

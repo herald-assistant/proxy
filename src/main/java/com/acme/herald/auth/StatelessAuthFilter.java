@@ -73,6 +73,6 @@ public class StatelessAuthFilter extends OncePerRequestFilter {
     private void send401(HttpServletResponse res, String reason) throws java.io.IOException {
         res.setStatus(401);
         res.setContentType("application/json");
-        res.getWriter().write("{\"reason\":\"" + reason + "\",\"reauthUrl\":\"/proxy/auth/wrap\"}");
+        res.getWriter().write("{\"reason\":\"" + reason + "\"}");
     }
 }

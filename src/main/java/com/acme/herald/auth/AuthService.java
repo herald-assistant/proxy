@@ -47,7 +47,7 @@ public class AuthService {
             String enc = crypto.encrypt(json);
             return new AuthDtos.WrapRes(enc, props.getCookieName(), payload.exp());
         } catch (Exception e) {
-            throw new IllegalStateException("wrap failed", e);
+            throw new IllegalStateException("Token wrapping failed.", e);
         }
     }
 
