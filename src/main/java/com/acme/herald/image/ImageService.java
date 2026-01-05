@@ -1,6 +1,6 @@
 package com.acme.herald.image;
 
-import com.acme.herald.config.AdminJiraConfigService;
+import com.acme.herald.config.JiraConfigService;
 import com.acme.herald.domain.AttachmentDto;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ public class ImageService {
     );
 
     private final JiraProvider jira;
-    private final AdminJiraConfigService jiraAdminCfg;
+    private final JiraConfigService jiraCfg;
 
     public AttachmentDto upload(String issueKey, MultipartFile file) {
         if (file.getContentType() != null && !ALLOWED_MIME.contains(file.getContentType())) {
@@ -29,7 +29,7 @@ public class ImageService {
 
         var a = jira.attachAndReturnMeta(issueKey, file);
 
-        var cfg = jiraAdminCfg.getForRuntime();
+        var cfg = jiraCfg.getForRuntime();
         boolean useProxy = Boolean.TRUE.equals(cfg.options().proxyAttachmentContent());
 
         String base = "/images/" + a.id();

@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping(path = "/admin/config", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(
-        name = "AdminLlmConfigController",
+        name = "LlmConfigController",
         description = "Admin endpoints for managing the LLM catalog used by the proxy."
 )
 public class LlmConfigController {
 
-    private final AdminLlmConfigService svc;
+    private final LlmConfigService svc;
 
     @GetMapping("/llm-catalog")
     @Operation(

@@ -1,6 +1,6 @@
 package com.acme.herald.auth;
 
-import com.acme.herald.config.AdminJiraConfigService;
+import com.acme.herald.config.JiraConfigService;
 import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.MeContextDtos;
@@ -27,7 +27,7 @@ public class MeService {
 
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
-    private final AdminJiraConfigService jiraConfigService;
+    private final JiraConfigService jiraConfigService;
 
     public MeContextDtos.MeContext context() {
         var user = jira.getMe();

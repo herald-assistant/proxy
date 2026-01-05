@@ -6,7 +6,6 @@ import com.acme.herald.domain.dto.SearchResult;
 import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.List;

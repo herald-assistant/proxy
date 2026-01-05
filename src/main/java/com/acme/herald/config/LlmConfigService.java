@@ -18,7 +18,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-public class AdminLlmConfigService {
+public class LlmConfigService {
 
     private static final String PROP_KEY = "herald.llmCatalog";
     private static final String PERM_ADMIN = "ADMINISTER_PROJECTS";

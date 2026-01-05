@@ -1,6 +1,6 @@
 package com.acme.herald.smartcase;
 
-import com.acme.herald.config.AdminJiraConfigService;
+import com.acme.herald.config.JiraConfigService;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.UpsertCase;
 import com.acme.herald.provider.JiraProvider;
@@ -20,10 +20,10 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 @Slf4j
 public class LinkService {
     private final JiraProvider jira;
-    private final AdminJiraConfigService jiraAdminCfg;
+    private final JiraConfigService jiraCfg;
 
     TemplateLinkInfo resolveTemplateLinkInfo(UpsertCase req) {
-        var cfg = jiraAdminCfg.getForRuntime();
+        var cfg = jiraCfg.getForRuntime();
 
         String templateId = req.templateId();
         if (!isNotBlank(templateId)) {

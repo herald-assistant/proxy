@@ -173,7 +173,7 @@ public final class JiraIntegrationConfigDtos {
 
             @Schema(
                     description = """
-                            CASE status mapping: Herald category -> Jira workflow status name.
+                            CASE status mapping: Herald category -> Provider workflow status name.
                             Required keys: TODO, IN_PROGRESS, DONE, REJECTED.
                             Optional key: IN_REVIEW.
                             """,
@@ -191,7 +191,7 @@ public final class JiraIntegrationConfigDtos {
 
             @Schema(
                     description = """
-                            TEMPLATE status mapping: Herald category -> Jira workflow status name.
+                            TEMPLATE status mapping: Herald category -> Provider workflow status name.
                             Required keys: TODO, IN_PROGRESS, DONE, PUBLISHED, REJECTED, DEPRECATED.
                             Optional key: IN_REVIEW.
                             Note: PUBLISHED controls visibility in Hub.

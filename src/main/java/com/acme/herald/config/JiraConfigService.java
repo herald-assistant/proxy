@@ -17,7 +17,7 @@ import static com.acme.herald.config.JiraIntegrationConfigDtos.*;
 
 @Service
 @RequiredArgsConstructor
-public class AdminJiraConfigService {
+public class JiraConfigService {
 
     private static final String PROP_KEY = "herald.jiraConfig";
     private static final String PERM_ADMIN = "ADMINISTER_PROJECTS";
@@ -142,7 +142,7 @@ public class AdminJiraConfigService {
                         "unused",       // casePayload
                         "unused",       // epicLink
                         "unused",       // ratingAvg
-                        "description",  // description
+                        "unused",  // description
                         "",             // caseStatus (customfield_x)
                         ""              // templateStatus (customfield_x)
                 ),

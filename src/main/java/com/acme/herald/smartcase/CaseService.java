@@ -1,6 +1,6 @@
 package com.acme.herald.smartcase;
 
-import com.acme.herald.config.AdminJiraConfigService;
+import com.acme.herald.config.JiraConfigService;
 import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.UpsertCase;
@@ -25,11 +25,11 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 public class CaseService {
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
-    private final AdminJiraConfigService jiraAdminCfg;
+    private final JiraConfigService jiraCfg;
     private final LinkService linkService;
 
     public CaseRef upsertCase(UpsertCase req) {
-        var cfg = jiraAdminCfg.getForRuntime();
+        var cfg = jiraCfg.getForRuntime();
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
 

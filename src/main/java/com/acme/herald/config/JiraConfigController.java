@@ -14,12 +14,12 @@ import static com.acme.herald.config.JiraIntegrationConfigDtos.JiraIntegrationCo
 @RequiredArgsConstructor
 @RequestMapping(path = "/admin/jira", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(
-        name = "AdminJiraConfigController",
+        name = "JiraConfigController",
         description = "Admin endpoints for managing Provider integration configuration used by the proxy."
 )
 public class JiraConfigController {
 
-    private final AdminJiraConfigService service;
+    private final JiraConfigService service;
 
     @GetMapping
     @Operation(

@@ -58,7 +58,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Throwable.class)
     public CommonDtos.ApiError handleAny(Throwable e, HttpServletRequest req) {
-        log.error("Throwable", e);
+        log.error("Throwable on " + req.getRequestURL(), e);
         // tu nie wypluwaj szczegółów w prod; loguj po swojej stronie
         return new CommonDtos.ApiError(
                 "INTERNAL_ERROR",

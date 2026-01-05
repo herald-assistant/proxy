@@ -3,7 +3,7 @@ package com.acme.herald.ai;
 import com.acme.herald.auth.CryptoService;
 import com.acme.herald.domain.ChatDtos;
 import com.acme.herald.config.LlmIntegrationDtos.*;
-import com.acme.herald.config.AdminLlmConfigService;
+import com.acme.herald.config.LlmConfigService;
 import tools.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -22,7 +22,7 @@ import java.util.Map;
 public class LlmProxyService {
 
     private final RestClient rest;
-    private final AdminLlmConfigService adminConfig;
+    private final LlmConfigService llmConfig;
     private final CryptoService crypto;
     private final JsonMapper jsonMapper;
 
@@ -51,7 +51,7 @@ public class LlmProxyService {
      * req.model() = modelId z katalogu admina (np. "openai_gpt4o").
      */
     public ChatDtos.ChatResponse chatRaw(ChatDtos.ChatRequest req) {
-        LlmCatalogModelDto cfg = adminConfig.findEnabledModelInternalOrThrow(req.model());
+        LlmCatalogModelDto cfg = llmConfig.findEnabledModelInternalOrThrow(req.model());
 
         String upstreamModelName = (cfg.model() == null ? "" : cfg.model().trim());
         if (upstreamModelName.isEmpty()) {
