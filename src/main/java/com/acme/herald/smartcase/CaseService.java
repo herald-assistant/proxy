@@ -33,8 +33,20 @@ public class CaseService {
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
 
-        if (req.status() != null && cfg.status().caseFlow().stream().noneMatch(s -> s.equals(req.status()))) {
-            throw new IllegalArgumentException("Niepoprawny status case: " + req.status() + ". Dozwolone: " + cfg.status().caseFlow());
+        if (req.status() != null) {
+            String cat = req.status().trim().toUpperCase();
+
+            var map = cfg.status().caseStatusMap();
+            if (map == null || map.isEmpty()) {
+                throw new IllegalStateException("Brak konfiguracji statusów case (caseStatusMap).");
+            }
+
+            if (!map.containsKey(cat) || map.get(cat) == null || map.get(cat).isBlank()) {
+                throw new IllegalArgumentException(
+                        "Niepoprawna kategoria statusu case: " + req.status()
+                                + ". Dozwolone: " + map.keySet()
+                );
+            }
         }
 
         // pola issue

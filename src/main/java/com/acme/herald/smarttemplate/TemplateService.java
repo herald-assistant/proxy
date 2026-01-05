@@ -10,8 +10,6 @@ import com.acme.herald.web.JqlUtils;
 import com.acme.herald.web.dto.CommonDtos;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 import java.util.Map;
@@ -30,8 +28,25 @@ public class TemplateService {
         var issueTypes = cfg.issueTypes();
         var fieldsCfg = cfg.fields();
 
-        if (req.status() != null && cfg.status().templateFlow().stream().noneMatch(s -> s.equals(req.status()))) {
-            throw new IllegalArgumentException("Niepoprawny status template: " + req.status() + ". Dozwolone: " + cfg.status().templateFlow());
+        if (req.status() != null) {
+            String raw = req.status().trim();
+            String cat = raw.toUpperCase();
+
+            var map = cfg.status().templateStatusMap();
+            if (map == null || map.isEmpty()) {
+                throw new IllegalStateException("Brak konfiguracji statusów template (templateStatusMap).");
+            }
+
+            boolean okAsCategory = map.containsKey(cat) && map.get(cat) != null && !map.get(cat).isBlank();
+            boolean okAsJiraStatusName = map.values().stream().anyMatch(v -> v != null && v.equalsIgnoreCase(raw));
+
+            if (!okAsCategory && !okAsJiraStatusName) {
+                throw new IllegalArgumentException(
+                        "Niepoprawny status template: " + req.status()
+                                + ". Dozwolone kategorie: " + map.keySet()
+                                + " albo nazwy statusów Jira: " + map.values()
+                );
+            }
         }
 
         // pola issue
@@ -68,7 +83,7 @@ public class TemplateService {
         return new TemplateRef(issueKey, url);
     }
 
-    public void like(@PathVariable String issueKey, @RequestBody CommonDtos.LikeReq req) {
+    public void like(String issueKey, CommonDtos.LikeReq req) {
         jira.setVote(issueKey, req.liked());
     }
 }

@@ -8,8 +8,10 @@ import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.acme.herald.config.JiraIntegrationConfigDtos.*;
 
@@ -19,6 +21,12 @@ public class AdminJiraConfigService {
 
     private static final String PROP_KEY = "herald.jiraConfig";
     private static final String PERM_ADMIN = "ADMINISTER_PROJECTS";
+
+    private static final Set<String> CASE_ALLOWED = Set.of("TODO", "IN_PROGRESS", "DONE", "IN_REVIEW", "REJECTED");
+    private static final List<String> CASE_REQUIRED = List.of("TODO", "IN_PROGRESS", "DONE", "REJECTED");
+
+    private static final Set<String> TEMPLATE_ALLOWED = Set.of("TODO", "IN_PROGRESS", "DONE", "IN_REVIEW", "PUBLISHED", "REJECTED", "DEPRECATED");
+    private static final List<String> TEMPLATE_REQUIRED = List.of("TODO", "IN_PROGRESS", "DONE", "PUBLISHED", "REJECTED", "DEPRECATED");
 
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
@@ -49,10 +57,9 @@ public class AdminJiraConfigService {
                 nz(incoming.userPrefsIssueKey())
         );
 
-        validateStatusConfigOrThrow(out);
+        validateOrThrow(out);
 
         saveStored(out);
-
         runtimeCache = toDto(out);
     }
 
@@ -77,7 +84,7 @@ public class AdminJiraConfigService {
     // ───────────────────────────────────────────────────────
 
     private void requireProjectAdmin() {
-        String storageProjectKey = jiraProps.getProjectKey(); // tu trzymamy project property (repo config)
+        String storageProjectKey = jiraProps.getProjectKey();
         JiraModels.PermissionsResponse perms = jira.getMyPermissions(storageProjectKey, null, null);
         var map = perms != null ? perms.permissions() : null;
 
@@ -111,11 +118,11 @@ public class AdminJiraConfigService {
 
     private JiraIntegrationConfigDto toDto(StoredJiraIntegration s) {
         String effectiveProjectKey = pick(s.projectKey(), jiraProps.getProjectKey());
-        String effectivBbaseUrl = pick(s.baseUrl(), jiraProps.getBaseUrl());
+        String effectiveBaseUrl = pick(s.baseUrl(), jiraProps.getBaseUrl());
 
         return new JiraIntegrationConfigDto(
                 s.version(),
-                effectivBbaseUrl,
+                effectiveBaseUrl,
                 effectiveProjectKey,
                 s.issueTypes(),
                 s.fields(),
@@ -135,21 +142,33 @@ public class AdminJiraConfigService {
                 "",
                 new JiraIssueTypesConfigDto("Epic", "Task", "Story", "Sub-task"),
                 new JiraFieldsConfigDto(
-                        "summary", // templateId
-                        "summary", // caseId
-                        "description", // payload
-                        "unused", // casePayload
-                        "unused", // epicLink
-                        "unused", // ratingAvg
-                        "unused", // description
-                        "", // caseStatus
-                        "" // templateStatus
+                        "summary",      // templateId
+                        "summary",      // caseId
+                        "description",  // payload
+                        "unused",       // casePayload
+                        "unused",       // epicLink
+                        "unused",       // ratingAvg
+                        "description",  // description
+                        "",             // caseStatus (customfield_x)
+                        ""              // templateStatus (customfield_x)
                 ),
                 new JiraLinksConfigDto("Implements"),
                 new JiraOptionsConfigDto(true, true, false),
                 new JiraStatusConfigDto(
-                        List.of("todo", "in_progress", "done", "rejected"),
-                        List.of("todo", "in_progress", "done", "rejected", "published")
+                        Map.of(
+                                "TODO", "To Do",
+                                "IN_PROGRESS", "In Progress",
+                                "DONE", "Done",
+                                "REJECTED", "Rejected"
+                        ),
+                        Map.of(
+                                "TODO", "To Do",
+                                "IN_PROGRESS", "In Progress",
+                                "DONE", "Done",
+                                "PUBLISHED", "Published",
+                                "REJECTED", "Rejected",
+                                "DEPRECATED", "Deprecated"
+                        )
                 ),
                 "" // userPrefsIssueKey
         );
@@ -185,10 +204,73 @@ public class AdminJiraConfigService {
     }
 
     private JiraStatusConfigDto mergeStatusWithDefaults(JiraStatusConfigDto s, JiraStatusConfigDto d) {
-        return new JiraStatusConfigDto(
-                (s.caseFlow() != null && !s.caseFlow().isEmpty()) ? s.caseFlow() : d.caseFlow(),
-                (s.templateFlow() != null && !s.templateFlow().isEmpty()) ? s.templateFlow() : d.templateFlow()
+        Map<String, String> caseMap = mergeStatusMap(
+                s.caseStatusMap(), d.caseStatusMap(),
+                CASE_ALLOWED, CASE_REQUIRED
         );
+
+        Map<String, String> templateMap = mergeStatusMap(
+                s.templateStatusMap(), d.templateStatusMap(),
+                TEMPLATE_ALLOWED, TEMPLATE_REQUIRED
+        );
+
+        // IN_REVIEW jest opcjonalne -> jeśli jest ustawione, zostawiamy
+        String inReviewCase = normalizeKeyLookup(s.caseStatusMap(), "IN_REVIEW");
+        if (inReviewCase != null) {
+            caseMap.put("IN_REVIEW", inReviewCase);
+        }
+
+        String inReviewTpl = normalizeKeyLookup(s.templateStatusMap(), "IN_REVIEW");
+        if (inReviewTpl != null) {
+            templateMap.put("IN_REVIEW", inReviewTpl);
+        }
+
+        return new JiraStatusConfigDto(caseMap, templateMap);
+    }
+
+    private static Map<String, String> mergeStatusMap(
+            Map<String, String> src,
+            Map<String, String> def,
+            Set<String> allowed,
+            List<String> required
+    ) {
+        Map<String, String> out = new LinkedHashMap<>();
+
+        if (src != null) {
+            for (var e : src.entrySet()) {
+                String k = normalizeKey(e.getKey());
+                if (!allowed.contains(k)) continue;
+                String v = nz(e.getValue());
+                if (!v.isBlank()) out.put(k, v);
+            }
+        }
+
+        // required keys fallback to defaults
+        if (def != null) {
+            for (String k : required) {
+                if (!out.containsKey(k)) {
+                    String dv = nz(def.get(k));
+                    if (!dv.isBlank()) out.put(k, dv);
+                }
+            }
+        }
+
+        return out;
+    }
+
+    private static String normalizeKeyLookup(Map<String, String> map, String keyUpper) {
+        if (map == null) return null;
+        for (var e : map.entrySet()) {
+            if (normalizeKey(e.getKey()).equals(keyUpper)) {
+                String v = nz(e.getValue());
+                return v.isBlank() ? null : v;
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeKey(String k) {
+        return k == null ? "" : k.trim().toUpperCase();
     }
 
     private static String pick(String value, String def) {
@@ -240,23 +322,51 @@ public class AdminJiraConfigService {
         JiraStatusConfigDto d = defaultConfig().status();
         if (in == null) return d;
 
-        List<String> caseFlow = normalizeFlow(in.caseFlow(), d.caseFlow());
-        List<String> templateFlow = normalizeFlow(in.templateFlow(), d.templateFlow());
+        Map<String, String> caseMap = normalizeStatusMap(
+                in.caseStatusMap(),
+                d.caseStatusMap(),
+                CASE_ALLOWED
+        );
 
-        return new JiraStatusConfigDto(caseFlow, templateFlow);
+        Map<String, String> templateMap = normalizeStatusMap(
+                in.templateStatusMap(),
+                d.templateStatusMap(),
+                TEMPLATE_ALLOWED
+        );
+
+        return new JiraStatusConfigDto(caseMap, templateMap);
     }
 
-    private static List<String> normalizeFlow(List<String> src, List<String> def) {
-        if (src == null) return def;
-        List<String> out = src.stream()
-                .map(AdminJiraConfigService::nz)
-                .filter(s -> !s.isBlank())
-                .distinct()
-                .toList();
-        return out.isEmpty() ? def : out;
+    private static Map<String, String> normalizeStatusMap(
+            Map<String, String> src,
+            Map<String, String> def,
+            Set<String> allowed
+    ) {
+        Map<String, String> out = new LinkedHashMap<>();
+
+        if (src != null) {
+            for (var e : src.entrySet()) {
+                String k = normalizeKey(e.getKey());
+                if (!allowed.contains(k)) continue;
+                String v = nz(e.getValue());
+                if (!v.isBlank()) out.put(k, v);
+            }
+        }
+
+        // jeśli po normalizacji nic nie ma -> bierzemy defaulty w całości
+        if (out.isEmpty() && def != null && !def.isEmpty()) {
+            for (var e : def.entrySet()) {
+                String k = normalizeKey(e.getKey());
+                if (!allowed.contains(k)) continue;
+                String v = nz(e.getValue());
+                if (!v.isBlank()) out.put(k, v);
+            }
+        }
+
+        return out;
     }
 
-    private void validateStatusConfigOrThrow(StoredJiraIntegration cfg) {
+    private void validateOrThrow(StoredJiraIntegration cfg) {
         JiraFieldsConfigDto f = cfg.fields();
         JiraStatusConfigDto s = cfg.status();
 
@@ -264,15 +374,31 @@ public class AdminJiraConfigService {
                 || f.caseStatus() == null || f.caseStatus().isBlank()
                 || f.templateStatus() == null || f.templateStatus().isBlank();
 
-        boolean missingFlow = s == null
-                || s.caseFlow() == null || s.caseFlow().isEmpty()
-                || s.templateFlow() == null || s.templateFlow().isEmpty();
+        boolean missingUserPrefsIssueKey = cfg.userPrefsIssueKey() == null || cfg.userPrefsIssueKey().isBlank();
 
+        if (missingUserPrefsIssueKey) {
+            throw new IllegalArgumentException("Jira config: musisz ustawić userPrefsIssueKey (np. HERALD-OPS-1).");
+        }
         if (missingField) {
             throw new IllegalArgumentException("Jira config: musisz ustawić fields.caseStatus oraz fields.templateStatus (customfield_xxxxx).");
         }
-        if (missingFlow) {
-            throw new IllegalArgumentException("Jira config: musisz ustawić status.caseFlow oraz status.templateFlow (lista statusów).");
+        if (s == null) {
+            throw new IllegalArgumentException("Jira config: musisz ustawić status.caseStatusMap oraz status.templateStatusMap.");
+        }
+
+        requireKeys(s.caseStatusMap(), CASE_REQUIRED, "status.caseStatusMap");
+        requireKeys(s.templateStatusMap(), TEMPLATE_REQUIRED, "status.templateStatusMap");
+    }
+
+    private static void requireKeys(Map<String, String> map, List<String> requiredKeys, String where) {
+        if (map == null || map.isEmpty()) {
+            throw new IllegalArgumentException("Jira config: " + where + " nie może być puste.");
+        }
+        for (String k : requiredKeys) {
+            String v = map.get(k);
+            if (v == null || v.isBlank()) {
+                throw new IllegalArgumentException("Jira config: " + where + " musi zawierać klucz " + k + " (niepusty).");
+            }
         }
     }
 

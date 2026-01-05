@@ -3,11 +3,15 @@ package com.acme.herald.config;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 
-import java.util.List;
+import java.util.Map;
 
 public final class JiraIntegrationConfigDtos {
 
     private JiraIntegrationConfigDtos() {}
+
+    // ─────────────────────────────────────────────────────────────
+    // PUBLIC DTO (OpenAPI)
+    // ─────────────────────────────────────────────────────────────
 
     @Schema(description = "Provider integration configuration used by the proxy.")
     public record JiraIntegrationConfigDto(
@@ -15,18 +19,21 @@ public final class JiraIntegrationConfigDtos {
             @Schema(description = "Configuration schema version.", example = "1")
             Integer version,
 
-            @Schema(description = "Provider base URL override. When empty, the proxy default is used.", example = "https://provider.example.com")
+            @Schema(description = "Provider base URL override. When empty, the proxy default is used.",
+                    example = "https://jira.example.com")
             String baseUrl,
 
-            @Schema(description = "Provider project key override. When empty, the proxy default is used.", example = "ABC")
+            @Schema(description = "Provider project key override. When empty, the proxy default is used.",
+                    example = "ABC")
             String projectKey,
 
-            @Schema(description = "Provider issue type names used by the proxy.", example = "{\"epic\":\"Epic\",\"template\":\"Task\",\"caseIssue\":\"Story\",\"section\":\"Sub-task\"}")
+            @Schema(description = "Provider issue type names used by the proxy.",
+                    example = "{\"epic\":\"Epic\",\"template\":\"Task\",\"caseIssue\":\"Story\",\"section\":\"Sub-task\"}")
             @Valid
             JiraIssueTypesConfigDto issueTypes,
 
             @Schema(description = "Provider field identifiers used by the proxy (e.g., built-in field names or custom field IDs).",
-                    example = "{\"templateId\":\"summary\",\"caseId\":\"summary\",\"payload\":\"description\",\"casePayload\":\"customfield_12345\",\"epicLink\":\"customfield_10008\",\"ratingAvg\":\"customfield_20001\",\"description\":\"description\",\"caseStatus\":\"customfield_30001\",\"templateStatus\":\"customfield_30002\"}")
+                    example = "{\"templateId\":\"customfield_10112\",\"caseId\":\"customfield_10113\",\"payload\":\"customfield_10114\",\"casePayload\":\"customfield_10301\",\"epicLink\":\"customfield_10101\",\"ratingAvg\":\"customfield_10115\",\"description\":\"description\",\"caseStatus\":\"customfield_12345\",\"templateStatus\":\"customfield_12346\"}")
             @Valid
             JiraFieldsConfigDto fields,
 
@@ -40,8 +47,43 @@ public final class JiraIntegrationConfigDtos {
             @Valid
             JiraOptionsConfigDto options,
 
-            @Schema(description = "Allowed status values used by template/case flows.",
-                    example = "{\"caseFlow\":[\"todo\",\"in_progress\",\"done\"],\"templateFlow\":[\"todo\",\"in_progress\",\"published\"]}")
+            @Schema(
+                    description = """
+                            Mapping of Herald status categories to Jira workflow status names.
+                            
+                            Herald uses Jira workflow statuses as the source of truth, but needs a stable abstraction:
+                            - TODO: initial status (must exist)
+                            - IN_PROGRESS: work in progress (must exist)
+                            - DONE: completed (must exist)
+                            - IN_REVIEW: optional, reserved for future approval workflows
+                            - PUBLISHED: (templates only) makes template visible in Hub (must exist for templates)
+                            - REJECTED: hidden state (issue remains in Jira but Herald should not show it)
+                            - DEPRECATED: (templates only) informational state; cases based on this template should display a badge
+                            
+                            Keys are upper-case category identifiers. Values are exact Jira status names from the workflow,
+                            e.g. "To Do", "In Progress", "Done", "Published".
+                            """,
+                    example = """
+                            {
+                              "caseStatusMap": {
+                                "TODO": "To Do",
+                                "IN_PROGRESS": "In Progress",
+                                "DONE": "Done",
+                                "REJECTED": "Rejected",
+                                "IN_REVIEW": "In Review"
+                              },
+                              "templateStatusMap": {
+                                "TODO": "To Do",
+                                "IN_PROGRESS": "In Progress",
+                                "DONE": "Done",
+                                "PUBLISHED": "Published",
+                                "REJECTED": "Rejected",
+                                "DEPRECATED": "Deprecated",
+                                "IN_REVIEW": "In Review"
+                              }
+                            }
+                            """
+            )
             @Valid
             JiraStatusConfigDto status,
 
@@ -49,6 +91,10 @@ public final class JiraIntegrationConfigDtos {
                     example = "ABC-1")
             String userPrefsIssueKey
     ) {}
+
+    // ─────────────────────────────────────────────────────────────
+    // SUB-DTOS
+    // ─────────────────────────────────────────────────────────────
 
     @Schema(description = "Provider issue type names used by the proxy.")
     public record JiraIssueTypesConfigDto(
@@ -69,31 +115,33 @@ public final class JiraIntegrationConfigDtos {
     @Schema(description = "Provider field identifiers used by the proxy.")
     public record JiraFieldsConfigDto(
 
-            @Schema(description = "Field identifier used to store templateId.", example = "customfield_10010")
+            @Schema(description = "Field identifier used to store templateId.", example = "customfield_10112")
             String templateId,
 
-            @Schema(description = "Field identifier used to store caseId.", example = "customfield_10011")
+            @Schema(description = "Field identifier used to store caseId.", example = "customfield_10113")
             String caseId,
 
-            @Schema(description = "Field identifier used to store raw JSON payload (stringified).", example = "customfield_10012")
+            @Schema(description = "Field identifier used to store raw JSON payload (stringified).", example = "customfield_10114")
             String payload,
 
-            @Schema(description = "Field identifier used to store case payload in wiki/markup format.", example = "customfield_10013")
+            @Schema(description = "Field identifier used to store case payload in wiki/markup format.", example = "customfield_10301")
             String casePayload,
 
-            @Schema(description = "Field identifier used to store epic link reference.", example = "customfield_10008")
+            @Schema(description = "Field identifier used to store epic link reference.", example = "customfield_10101")
             String epicLink,
 
-            @Schema(description = "Field identifier used to store rating average (optional).", example = "customfield_20001")
+            @Schema(description = "Field identifier used to store rating average (optional).", example = "customfield_10115")
             String ratingAvg,
 
             @Schema(description = "Field identifier used as a human-readable description field.", example = "description")
             String description,
 
-            @Schema(description = "Field identifier used to store case status.", example = "customfield_30001")
+            @Schema(description = "Custom field identifier used to store case workflow status (Herald mapping).",
+                    example = "customfield_12345")
             String caseStatus,
 
-            @Schema(description = "Field identifier used to store template status.", example = "customfield_30002")
+            @Schema(description = "Custom field identifier used to store template workflow status (Herald mapping).",
+                    example = "customfield_12346")
             String templateStatus
     ) {}
 
@@ -120,22 +168,52 @@ public final class JiraIntegrationConfigDtos {
             Boolean useOptimisticLock
     ) {}
 
-    @Schema(description = "Allowed status flows used by the proxy.")
+    @Schema(description = "Status mapping configuration used by the proxy.")
     public record JiraStatusConfigDto(
 
-            @Schema(description = "Allowed statuses for case lifecycle.", example = "[\"todo\",\"in_progress\",\"done\",\"rejected\"]")
-            List<String> caseFlow,
+            @Schema(
+                    description = """
+                            CASE status mapping: Herald category -> Jira workflow status name.
+                            Required keys: TODO, IN_PROGRESS, DONE, REJECTED.
+                            Optional key: IN_REVIEW.
+                            """,
+                    example = """
+                            {
+                              "TODO": "To Do",
+                              "IN_PROGRESS": "In Progress",
+                              "DONE": "Done",
+                              "REJECTED": "Rejected",
+                              "IN_REVIEW": "In Review"
+                            }
+                            """
+            )
+            Map<String, String> caseStatusMap,
 
-            @Schema(description = "Allowed statuses for template lifecycle.", example = "[\"todo\",\"in_progress\",\"published\",\"rejected\"]")
-            List<String> templateFlow
+            @Schema(
+                    description = """
+                            TEMPLATE status mapping: Herald category -> Jira workflow status name.
+                            Required keys: TODO, IN_PROGRESS, DONE, PUBLISHED, REJECTED, DEPRECATED.
+                            Optional key: IN_REVIEW.
+                            Note: PUBLISHED controls visibility in Hub.
+                            """,
+                    example = """
+                            {
+                              "TODO": "To Do",
+                              "IN_PROGRESS": "In Progress",
+                              "DONE": "Done",
+                              "PUBLISHED": "Published",
+                              "REJECTED": "Rejected",
+                              "DEPRECATED": "Deprecated",
+                              "IN_REVIEW": "In Review"
+                            }
+                            """
+            )
+            Map<String, String> templateStatusMap
     ) {}
 
     // ─────────────────────────────────────────────────────────────
-    // INTERNAL STORAGE MODEL (optional)
-    //
-    // Jeśli trzymasz to jako project property i też chcesz mieć to w jednym pliku,
-    // możesz zostawić tu "StoredJiraIntegration" jako record bez @Schema.
-    // OpenAPI i tak będzie bazował na JiraIntegrationConfigDto.
+    // INTERNAL STORAGE MODEL
+    // (Project Property payload; can remain identical to public DTO structure)
     // ─────────────────────────────────────────────────────────────
 
     public record StoredJiraIntegration(
