@@ -29,8 +29,6 @@ public class AdminLlmConfigService {
     private final CryptoService crypto;
 
     public LlmCatalogDto getCatalog() {
-        requireProjectAdmin();
-
         StoredCatalog stored = loadStored();
 
         List<LlmCatalogModelDto> models = new ArrayList<>();

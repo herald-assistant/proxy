@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
         name = "AdminLlmConfigController",
         description = "Admin endpoints for managing the LLM catalog used by the proxy."
 )
-public class AdminLlmConfigController {
+public class LlmConfigController {
 
     private final AdminLlmConfigService svc;
 

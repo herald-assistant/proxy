@@ -36,12 +36,6 @@ public class AdminJiraConfigService {
 
     // ─────────── ADMIN endpoints ───────────
 
-    public JiraIntegrationConfigDto getForAdmin() {
-        requireProjectAdmin();
-        StoredJiraIntegration stored = loadStoredOrDefault();
-        return toDto(stored);
-    }
-
     public void saveForAdmin(JiraIntegrationConfigDto incoming) {
         requireProjectAdmin();
 

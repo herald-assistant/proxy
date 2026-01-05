@@ -17,7 +17,7 @@ import static com.acme.herald.config.JiraIntegrationConfigDtos.JiraIntegrationCo
         name = "AdminJiraConfigController",
         description = "Admin endpoints for managing Provider integration configuration used by the proxy."
 )
-public class AdminJiraConfigController {
+public class JiraConfigController {
 
     private final AdminJiraConfigService service;
 
@@ -27,7 +27,7 @@ public class AdminJiraConfigController {
             description = "Returns the current integration configuration used by the proxy at runtime."
     )
     public JiraIntegrationConfigDto getJiraConfig() {
-        return service.getForAdmin();
+        return service.getForRuntime();
     }
 
     @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
