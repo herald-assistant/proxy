@@ -72,7 +72,7 @@ public class TemplateService {
             issueKey = jira.createIssue(Map.of("fields", fields)).key();
         } else {
             var issue = existing.issues().getFirst();
-            issueKey = issue.path("key").asText(null);
+            issueKey = issue.path("key").asString();
             if (!isNotBlank(issueKey)) {
                 throw new IllegalStateException("Jira search returned issue without key for jql: " + jql);
             }

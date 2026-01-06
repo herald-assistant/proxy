@@ -146,8 +146,8 @@ public class LlmProxyService {
         try {
             JsonNode root = jsonMapper.readValue(exceptionBody, JsonNode.class);
             JsonNode err = root.path("error");
-            String code = err.path("code").asText("");
-            String param = err.path("param").asText("");
+            String code = err.path("code").asString("");
+            String param = err.path("param").asString("");
             if ("unsupported_parameter".equals(code) && !param.isBlank()) {
                 return param;
             }

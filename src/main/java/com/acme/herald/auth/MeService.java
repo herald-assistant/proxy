@@ -89,7 +89,7 @@ public class MeService {
             return new MeContextDtos.UserProfilePrefs("", false, null);
         }
 
-        String desc = v.path("explainUserDescription").asText("");
+        String desc = v.path("explainUserDescription").asString("");
         boolean notify = bool(v.get("notifyNewTemplates"));
         String updatedAt = strOrNull(v.get("updatedAt"));
 
@@ -141,7 +141,7 @@ public class MeService {
 
     private static String strOrNull(JsonNode n) {
         if (n == null || n.isNull() || n.isMissingNode()) return null;
-        String s = n.asText(null);
+        String s = n.asString(null);
         if (s == null) return null;
         s = s.trim();
         return s.isEmpty() ? null : s;
@@ -152,7 +152,7 @@ public class MeService {
         if (n.isBoolean()) return n.booleanValue();
 
         // Jira property bywa stringiem
-        String s = n.asText("").trim().toLowerCase();
+        String s = n.asString("").trim().toLowerCase();
         return s.equals("true") || s.equals("1") || s.equals("yes") || s.equals("y") || s.equals("on");
     }
 }

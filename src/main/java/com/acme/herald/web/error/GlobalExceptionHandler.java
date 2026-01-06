@@ -1,4 +1,4 @@
-package com.acme.herald.web;
+package com.acme.herald.web.error;
 
 import com.acme.herald.web.dto.CommonDtos;
 import jakarta.servlet.http.HttpServletRequest;

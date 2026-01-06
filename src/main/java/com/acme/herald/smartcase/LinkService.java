@@ -58,7 +58,7 @@ public class LinkService {
             return new TemplateLinkInfo(null, null);
         }
 
-        String templateKey = issues.get(0).path("key").asText(null);
+        String templateKey = issues.get(0).path("key").asString(null);
         if (!isNotBlank(templateKey)) {
             return new TemplateLinkInfo(null, null);
         }
@@ -115,11 +115,11 @@ public class LinkService {
             if (!links.isArray()) return false;
 
             for (JsonNode l : links) {
-                String name = l.path("type").path("name").asText(null);
+                String name = l.path("type").path("name").asString(null);
                 if (!linkTypeName.equals(name)) continue;
 
-                String inKey = l.path("inwardIssue").path("key").asText(null);
-                String outKey = l.path("outwardIssue").path("key").asText(null);
+                String inKey = l.path("inwardIssue").path("key").asString(null);
+                String outKey = l.path("outwardIssue").path("key").asString(null);
 
                 if (templateKey.equals(inKey) || templateKey.equals(outKey)) return true;
             }

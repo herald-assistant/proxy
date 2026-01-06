@@ -109,7 +109,7 @@ public class CaseService {
         } else {
             // UPDATE
             JsonNode issue = existing.issues().stream().findAny().orElseThrow();
-            caseKey = issue.get("key").asText(null);
+            caseKey = issue.get("key").asString(null);
             jira.updateIssue(caseKey, Map.of("fields", fields));
         }
 
