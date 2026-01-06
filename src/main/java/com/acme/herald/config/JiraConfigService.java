@@ -32,8 +32,6 @@ public class JiraConfigService {
     private final JiraProperties jiraProps;
     private final JsonMapper jsonMapper;
 
-    private volatile JiraIntegrationConfigDto runtimeCache;
-
     // ─────────── ADMIN endpoints ───────────
 
     public void saveForAdmin(JiraIntegrationConfigDto incoming) {
@@ -54,25 +52,13 @@ public class JiraConfigService {
         validateOrThrow(out);
 
         saveStored(out);
-        runtimeCache = toDto(out);
     }
 
     // ─────────── runtime (dla normalnych userów) ───────────
 
     public JiraIntegrationConfigDto getForRuntime() {
-        JiraIntegrationConfigDto cached = runtimeCache;
-        if (cached != null) return cached;
-
-        try {
-            StoredJiraIntegration stored = loadStoredOrDefault();
-            JiraIntegrationConfigDto dto = toDto(stored);
-            runtimeCache = dto;
-            return dto;
-        } catch (Exception e) {
-            JiraIntegrationConfigDto dto = toDto(defaultConfig());
-            runtimeCache = dto;
-            return dto;
-        }
+        StoredJiraIntegration stored = loadStoredOrDefault();
+        return toDto(stored);
     }
 
     // ───────────────────────────────────────────────────────
