@@ -16,6 +16,8 @@ import tools.jackson.databind.json.JsonMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import static java.util.Optional.ofNullable;
+
 @Service
 @RequiredArgsConstructor
 public class LlmConfigService {
@@ -32,7 +34,7 @@ public class LlmConfigService {
         StoredCatalog stored = loadStored();
 
         List<LlmCatalogModelDto> models = new ArrayList<>();
-        for (StoredModel m : stored.models()) {
+        for (StoredModel m : ofNullable(stored.models()).orElse(List.of())) {
             models.add(new LlmCatalogModelDto(
                     m.id(),
                     m.label(),
@@ -58,7 +60,7 @@ public class LlmConfigService {
         for (StoredModel m : current.models()) byId.put(m.id(), m);
 
         List<StoredModel> out = new ArrayList<>();
-        for (LlmCatalogModelDto m : Optional.ofNullable(incoming.models()).orElse(List.of())) {
+        for (LlmCatalogModelDto m : ofNullable(incoming.models()).orElse(List.of())) {
             if (m.id() == null || m.id().isBlank()) continue;
 
             StoredModel prev = byId.get(m.id());

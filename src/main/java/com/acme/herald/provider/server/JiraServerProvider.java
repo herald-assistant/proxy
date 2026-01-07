@@ -7,8 +7,6 @@ import com.acme.herald.auth.TokenPayload;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.JiraModels.IssueRef;
 import com.acme.herald.domain.JiraModels.SearchResponse;
-import com.acme.herald.domain.dto.SearchItem;
-import com.acme.herald.domain.dto.SearchResult;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.provider.feign.JiraApiV2Client;
 import feign.FeignException;
@@ -21,15 +19,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.JsonNodeFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -39,6 +35,7 @@ class JiraServerProvider implements JiraProvider {
     private final JiraApiV2Client api;
     private final HttpServletRequest req;
     private final RestClient rest = RestClient.builder().build();
+    private final JsonMapper jsonMapper;
 
     @Override
     public TokenPayload createPatByUsernamePdWithMeta(String username, String pd, int days) {
@@ -300,6 +297,60 @@ class JiraServerProvider implements JiraProvider {
     public void deleteComment(String issueKey, String commentId) {
         var tp = currentAuth();
         api.deleteComment(auth(tp), issueKey, commentId);
+    }
+
+    @Override
+    public JiraModels.ChangelogPage getIssueChangelog(String issueKey, int startAt, int maxResults) {
+        var tp = currentAuth();
+        try {
+            JsonNode issue = api.getIssue(auth(tp), issueKey, "changelog,names");
+            JsonNode changelog = issue.path("changelog");
+            JsonNode names = issue.path("names");
+            return toChangelogPage(changelog, names, startAt, maxResults);
+        } catch (RuntimeException e) {
+            log.warn("Exception during fetching Changelog: {}, returning empty page. {}",
+                    issueKey, safeMsg(e));
+            return emptyChangelogPage(startAt, maxResults);
+        }
+    }
+
+    private JiraModels.ChangelogPage toChangelogPage(
+            JsonNode changelog,
+            JsonNode names,
+            int fallbackStartAt,
+            int fallbackMaxResults
+    ) {
+        try {
+            if (changelog == null || changelog.isNull() || changelog.isMissingNode()) {
+                return emptyChangelogPage(fallbackStartAt, fallbackMaxResults);
+            }
+
+            // 1) changelog -> typowany core (bez fieldNames)
+            JiraModels.ChangelogPageCore core = jsonMapper.treeToValue(changelog, JiraModels.ChangelogPageCore.class);
+            if (core == null) {
+                return emptyChangelogPage(fallbackStartAt, fallbackMaxResults);
+            }
+
+            // 2) names -> Map<String,String> (fieldId -> label)
+            Map<String, String> fieldNames = jsonMapper.convertValue(names, Map.class);
+
+            // 3) złożenie finalnego modelu
+            return new JiraModels.ChangelogPage(
+                    core.startAt(),
+                    core.maxResults(),
+                    core.total(),
+                    fieldNames,
+                    core.histories() != null ? core.histories() : List.of()
+            );
+
+        } catch (Exception e) {
+            log.warn("Failed to map changelog/names to ChangelogPage, returning empty. {}", safeMsg(e));
+            return emptyChangelogPage(fallbackStartAt, fallbackMaxResults);
+        }
+    }
+
+    private static JiraModels.ChangelogPage emptyChangelogPage(int startAt, int maxResults) {
+        return new JiraModels.ChangelogPage(startAt, maxResults, 0, Map.of(), List.of());
     }
 
     private TokenPayload currentAuth() {

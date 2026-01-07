@@ -1,5 +1,6 @@
 package com.acme.herald.smartcase;
 
+import com.acme.herald.domain.dto.CaseHistoryDtos;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.UpsertCase;
 import com.acme.herald.web.dto.CommonDtos;
@@ -26,6 +27,15 @@ public class CaseController {
     )
     public ResponseEntity<CaseRef> upsertCase(@RequestBody @Valid UpsertCase req) {
         return ResponseEntity.ok(service.upsertCase(req));
+    }
+
+    @GetMapping(path = "/{issueKey}/payload/history")
+    @Operation(
+            summary = "Get Smart Case payload history (BETA FEATURE)",
+            description = "Returns versions of the payload. May not work properly! Full version in next releases."
+    )
+    public ResponseEntity<CaseHistoryDtos.PayloadHistory> payloadHistory(@PathVariable String issueKey) {
+        return ResponseEntity.ok(service.payloadHistory(issueKey));
     }
 
     @PutMapping(path = "/{issueKey}/like", consumes = MediaType.APPLICATION_JSON_VALUE)

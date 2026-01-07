@@ -1,5 +1,6 @@
 package com.acme.herald.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import tools.jackson.databind.JsonNode;
 
@@ -67,8 +68,44 @@ public class JiraModels {
     public record SearchResponse(int startAt, int maxResults, int total, List<JsonNode> issues) {
     }
 
-    public record ChangelogItem(String field, String from, String to) {
-    }
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record ChangelogPageCore(
+            int startAt,
+            int maxResults,
+            int total,
+            List<JiraModels.ChangelogHistory> histories
+    ) { }
+
+    public record ChangelogPage(
+            int startAt,
+            int maxResults,
+            int total,
+            Map<String, String> fieldNames,
+            List<ChangelogHistory> histories
+    ) { }
+
+    public record ChangelogHistory(
+            String id,
+            String created,
+            ChangelogAuthor author,
+            List<ChangelogHistoryItem> items
+    ) { }
+
+    public record ChangelogAuthor(
+            String key,
+            String name,
+            String accountId,
+            String displayName
+    ) { }
+
+    public record ChangelogHistoryItem(
+            @JsonProperty("field") String fieldName,          // nazwa pola (label)
+            @JsonProperty("fieldtype") String fieldType,      // typ
+            String from,
+            @JsonProperty("fromString") String fromText,      // NIE fromString()
+            String to,
+            @JsonProperty("toString") String toText
+    ) { }
 
     public record AssigneePayload(String name, String key) {
     }

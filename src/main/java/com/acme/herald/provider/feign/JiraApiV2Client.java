@@ -107,6 +107,14 @@ public interface JiraApiV2Client {
             @RequestBody JiraModels.AssigneePayload payload
     );
 
+    @GetMapping(value = REST_API_PREFIX + "/issue/{key}/changelog")
+    JiraModels.ChangelogPage getIssueChangelog(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable("key") String key,
+            @RequestParam(defaultValue = "0") int startAt,
+            @RequestParam(defaultValue = "100") int maxResults
+    );
+
     @GetMapping(value = REST_API_PREFIX + "/user/assignable/search")
     List<JiraModels.AssignableUser> findAssignableUsers(
             @RequestHeader("Authorization") String auth,
