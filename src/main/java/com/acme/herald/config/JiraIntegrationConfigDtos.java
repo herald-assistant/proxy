@@ -14,6 +14,17 @@ public final class JiraIntegrationConfigDtos {
     // PUBLIC DTO (OpenAPI)
     // ─────────────────────────────────────────────────────────────
 
+    @Schema(description = "Optional global banner shown under the app header. When text is blank, banner is hidden.")
+    public record UiBannerDto(
+            @Schema(description = "Banner text (single line). When blank -> hidden.",
+                    example = "🚧 Przerwa serwisowa 20:00–21:00 (wdrożenie).")
+            String text,
+
+            @Schema(description = "Background color (HEX), e.g. #ff897d. If invalid -> default is used.",
+                    example = "#ff897d")
+            String color
+    ) {}
+
     @Schema(description = "Provider integration configuration used by the proxy.")
     public record JiraIntegrationConfigDto(
 
@@ -90,7 +101,8 @@ public final class JiraIntegrationConfigDtos {
             JiraAccessConfigDto access,
             @Schema(description = "Issue key used as a storage container for user profile preferences. When empty, profile updates are disabled.",
                     example = "ABC-1")
-            String userPrefsIssueKey
+            String userPrefsIssueKey,
+            UiBannerDto banner
     ) {}
 
     // ─────────────────────────────────────────────────────────────
@@ -232,6 +244,7 @@ public final class JiraIntegrationConfigDtos {
             JiraOptionsConfigDto options,
             JiraStatusConfigDto status,
             JiraAccessConfigDto access,
-            String userPrefsIssueKey
+            String userPrefsIssueKey,
+            UiBannerDto banner
     ) {}
 }

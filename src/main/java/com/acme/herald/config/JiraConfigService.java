@@ -12,12 +12,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import static com.acme.herald.config.JiraIntegrationConfigDtos.*;
 
 @Service
 @RequiredArgsConstructor
 public class JiraConfigService {
+    private static final Pattern HEX_COLOR = Pattern.compile("^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$");
+    private static final int BANNER_TEXT_MAX = 160;
+    private static final String DEFAULT_BANNER_COLOR = "#ff897d";
 
     private static final String PROP_KEY = "herald.jiraConfig";
     private static final String PERM_ADMIN = "ADMINISTER_PROJECTS";
@@ -47,7 +51,8 @@ public class JiraConfigService {
                 normalizeOptions(incoming.options()),
                 normalizeStatus(incoming.status()),
                 normalizeAccess(incoming.access()),
-                nz(incoming.userPrefsIssueKey())
+                nz(incoming.userPrefsIssueKey()),
+                normalizeBanner(incoming.banner())
         );
 
         validateOrThrow(out);
@@ -116,7 +121,8 @@ public class JiraConfigService {
                 s.options(),
                 s.status(),
                 s.access(),
-                s.userPrefsIssueKey()
+                s.userPrefsIssueKey(),
+                s.banner()
         );
     }
 
@@ -158,7 +164,8 @@ public class JiraConfigService {
                         )
                 ),
                 new JiraAccessConfigDto(List.of(), List.of()),
-                "" // userPrefsIssueKey
+                "", // userPrefsIssueKey,
+                new UiBannerDto("", DEFAULT_BANNER_COLOR)
         );
     }
 
@@ -174,7 +181,8 @@ public class JiraConfigService {
                 (s != null && s.options() != null ? s.options() : d.options()),
                 (s != null && s.status() != null ? mergeStatusWithDefaults(s.status(), d.status()) : d.status()),
                 (s != null && s.access() != null ? s.access() : d.access()),
-                pick(s != null ? s.userPrefsIssueKey() : null, d.userPrefsIssueKey())
+                pick(s != null ? s.userPrefsIssueKey() : null, d.userPrefsIssueKey()),
+                (s != null && s.banner() != null ? normalizeBanner(s.banner()) : d.banner()) // NEW
         );
     }
 
@@ -372,6 +380,26 @@ public class JiraConfigService {
 
         return out;
     }
+
+    private UiBannerDto normalizeBanner(UiBannerDto in) {
+        if (in == null) return new UiBannerDto("", DEFAULT_BANNER_COLOR);
+
+        String text = nz(in.text())
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .trim();
+
+        if (text.length() > BANNER_TEXT_MAX) {
+            text = text.substring(0, BANNER_TEXT_MAX).trim();
+        }
+
+        String color = nz(in.color()).trim();
+        if (color.isBlank()) color = DEFAULT_BANNER_COLOR;
+        if (!HEX_COLOR.matcher(color).matches()) color = DEFAULT_BANNER_COLOR;
+
+        return new UiBannerDto(text, color);
+    }
+
 
     private void validateOrThrow(StoredJiraIntegration cfg) {
         JiraFieldsConfigDto f = cfg.fields();
