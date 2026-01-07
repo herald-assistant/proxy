@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 import static com.acme.herald.config.JiraIntegrationConfigDtos.JiraIntegrationConfigDto;
 
 @RestController
@@ -28,6 +30,14 @@ public class JiraConfigController {
     )
     public JiraIntegrationConfigDto getJiraConfig() {
         return service.getForRuntime();
+    }
+
+    @GetMapping("/groups/picker")
+    public List<String> groupPicker(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        return service.groupPickerForAdmin(query, limit);
     }
 
     @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

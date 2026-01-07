@@ -186,4 +186,12 @@ public interface JiraApiV2Client {
             @RequestHeader("Authorization") String auth,
             @RequestBody Object body
     );
+
+    @GetMapping(value = REST_API_PREFIX + "/groups/picker")
+    JsonNode groupPicker(
+            @RequestHeader("Authorization") String auth,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String exclude,
+            @RequestParam(defaultValue = "20") int maxResults
+    );
 }

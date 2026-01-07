@@ -17,6 +17,7 @@ public interface JiraProvider {
 
     JiraModels.UserResponse getMe();
     JiraModels.PermissionsResponse getMyPermissions(String projectKey, String issueKey, List<String> permissions);
+    List<String> groupPicker(String query, List<String> exclude, int maxResults);
 
     JsonNode getProjectProperty(String projectKey, String propertyKey);
     void setProjectProperty(String projectKey, String propertyKey, Object propertyValue);

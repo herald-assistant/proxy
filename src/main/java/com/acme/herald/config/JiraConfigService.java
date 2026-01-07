@@ -46,12 +46,18 @@ public class JiraConfigService {
                 normalizeLinks(incoming.links()),
                 normalizeOptions(incoming.options()),
                 normalizeStatus(incoming.status()),
+                normalizeAccess(incoming.access()),
                 nz(incoming.userPrefsIssueKey())
         );
 
         validateOrThrow(out);
 
         saveStored(out);
+    }
+
+    public List<String> groupPickerForAdmin(String query, int limit) {
+        requireProjectAdmin();
+        return jira.groupPicker(nz(query), List.of(), limit);
     }
 
     // ─────────── runtime (dla normalnych userów) ───────────
@@ -109,6 +115,7 @@ public class JiraConfigService {
                 s.links(),
                 s.options(),
                 s.status(),
+                s.access(),
                 s.userPrefsIssueKey()
         );
     }
@@ -150,6 +157,7 @@ public class JiraConfigService {
                                 "DEPRECATED", "Deprecated"
                         )
                 ),
+                new JiraAccessConfigDto(List.of(), List.of()),
                 "" // userPrefsIssueKey
         );
     }
@@ -165,6 +173,7 @@ public class JiraConfigService {
                 (s != null && s.links() != null ? s.links() : d.links()),
                 (s != null && s.options() != null ? s.options() : d.options()),
                 (s != null && s.status() != null ? mergeStatusWithDefaults(s.status(), d.status()) : d.status()),
+                (s != null && s.access() != null ? s.access() : d.access()),
                 pick(s != null ? s.userPrefsIssueKey() : null, d.userPrefsIssueKey())
         );
     }
@@ -315,6 +324,24 @@ public class JiraConfigService {
         );
 
         return new JiraStatusConfigDto(caseMap, templateMap);
+    }
+
+    private JiraAccessConfigDto normalizeAccess(JiraAccessConfigDto in) {
+        if (in == null) return new JiraAccessConfigDto(List.of(), List.of());
+        return new JiraAccessConfigDto(
+                normalizeGroupList(in.allowGroups()),
+                normalizeGroupList(in.denyGroups())
+        );
+    }
+
+    private static List<String> normalizeGroupList(List<String> in) {
+        if (in == null) return List.of();
+        return in.stream()
+                .map(s -> s == null ? "" : s.trim())
+                .filter(s -> !s.isBlank())
+                .distinct()
+                .limit(200)
+                .toList();
     }
 
     private static Map<String, String> normalizeStatusMap(

@@ -1,5 +1,7 @@
 package com.acme.herald.auth;
 
+import com.acme.herald.config.JiraConfigService;
+import com.acme.herald.provider.JiraProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +20,8 @@ public class SecurityConfig {
     private final HeraldAuthProps authProps;
     private final CryptoService cryptoService;
     private final JsonMapper jsonMapper;
+    private final JiraConfigService jiraCfg;
+    private final JiraProvider jira;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) {
@@ -25,7 +29,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(reg -> reg
                         .requestMatchers("/**").permitAll())
-                .addFilterBefore(new StatelessAuthFilter(authProps, cryptoService, jsonMapper), org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
+                .addFilterBefore(new StatelessAuthFilter(authProps, cryptoService, jsonMapper, jiraCfg, jira), org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class)
                 .build();
     }
 

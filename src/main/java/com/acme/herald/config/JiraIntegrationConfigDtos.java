@@ -3,6 +3,7 @@ package com.acme.herald.config;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.Map;
 
 public final class JiraIntegrationConfigDtos {
@@ -86,7 +87,7 @@ public final class JiraIntegrationConfigDtos {
             )
             @Valid
             JiraStatusConfigDto status,
-
+            JiraAccessConfigDto access,
             @Schema(description = "Issue key used as a storage container for user profile preferences. When empty, profile updates are disabled.",
                     example = "ABC-1")
             String userPrefsIssueKey
@@ -211,6 +212,11 @@ public final class JiraIntegrationConfigDtos {
             Map<String, String> templateStatusMap
     ) {}
 
+    public record JiraAccessConfigDto(
+            List<String> allowGroups,
+            List<String> denyGroups
+    ) {}
+
     // ─────────────────────────────────────────────────────────────
     // INTERNAL STORAGE MODEL
     // (Project Property payload; can remain identical to public DTO structure)
@@ -225,6 +231,7 @@ public final class JiraIntegrationConfigDtos {
             JiraLinksConfigDto links,
             JiraOptionsConfigDto options,
             JiraStatusConfigDto status,
+            JiraAccessConfigDto access,
             String userPrefsIssueKey
     ) {}
 }

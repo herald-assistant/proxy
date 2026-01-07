@@ -89,6 +89,27 @@ class JiraServerProvider implements JiraProvider {
     }
 
     @Override
+    public List<String> groupPicker(String query, List<String> exclude, int maxResults) {
+        var tp = currentAuth();
+
+        String ex = (exclude == null || exclude.isEmpty()) ? null : String.join(",", exclude);
+        int lim = Math.max(1, Math.min(maxResults, 1000));
+
+        JsonNode raw = api.groupPicker(auth(tp), query, ex, lim);
+
+        JsonNode groups = raw.path("groups");
+
+        List<String> out = new ArrayList<>();
+        if (groups != null && groups.isArray()) {
+            for (JsonNode g : groups) {
+                String name = g.path("name").asString("");
+                if (!name.isBlank()) out.add(name);
+            }
+        }
+        return List.copyOf(out);
+    }
+
+    @Override
     public JsonNode getIssueProperty(String issueKey, String propertyKey) {
         var tp = currentAuth();
         try {
