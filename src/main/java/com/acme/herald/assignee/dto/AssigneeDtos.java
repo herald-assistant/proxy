@@ -46,9 +46,5 @@ public class AssigneeDtos {
                     example = "USER12345")
             String key
     ) {
-        @AssertTrue(message = "Either 'name' or 'key' must be provided.")
-        public boolean isValid() {
-            return (name != null && !name.isBlank()) || (key != null && !key.isBlank());
-        }
     }
 }
