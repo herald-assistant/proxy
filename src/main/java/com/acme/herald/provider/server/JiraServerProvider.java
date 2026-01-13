@@ -314,6 +314,12 @@ class JiraServerProvider implements JiraProvider {
         }
     }
 
+    @Override
+    public List<JiraModels.IssueLinkType> getIssueLinkTypes() {
+        var tp = currentAuth();
+        return api.getIssueLinkTypes(auth(tp)).issueLinkTypes();
+    }
+
     private JiraModels.ChangelogPage toChangelogPage(
             JsonNode changelog,
             JsonNode names,

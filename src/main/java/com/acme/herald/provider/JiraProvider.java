@@ -49,5 +49,10 @@ public interface JiraProvider {
     JiraModels.Comment addComment(String issueKey, String renderedBody);
     JiraModels.Comment updateComment(String issueKey, String commentId, String renderedBody);
     void deleteComment(String issueKey, String commentId);
+
+    // changelog
     JiraModels.ChangelogPage getIssueChangelog(String issueKey, int startAt, int max);
+
+    // links
+    List<JiraModels.IssueLinkType> getIssueLinkTypes();
 }

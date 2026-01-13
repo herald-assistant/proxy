@@ -161,8 +161,10 @@ public final class JiraIntegrationConfigDtos {
     @Schema(description = "Link type configuration used by the proxy.")
     public record JiraLinksConfigDto(
 
-            @Schema(description = "Provider link type name used for linking templates to cases.", example = "Implements")
-            String templateToCase
+            @Schema(description = "Provider link type id used for linking templates to cases.")
+            String templateToCase,
+            @Schema(description = "Provider link type id used for linking templates to template fork")
+            String templateToFork
     ) {}
 
     @Schema(description = "Integration options controlling proxy behavior.")

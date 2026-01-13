@@ -1,8 +1,7 @@
-package com.acme.herald.smartcase;
+package com.acme.herald.links;
 
 import com.acme.herald.config.JiraConfigService;
 import com.acme.herald.domain.JiraModels;
-import com.acme.herald.domain.dto.UpsertCase;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.JqlUtils;
 import lombok.RequiredArgsConstructor;
@@ -22,16 +21,23 @@ public class LinkService {
     private final JiraProvider jira;
     private final JiraConfigService jiraCfg;
 
-    TemplateLinkInfo resolveTemplateLinkInfo(UpsertCase req) {
+    public List<JiraModels.IssueLinkType> list() {
+        return jira.getIssueLinkTypes();
+    }
+
+    public String templateToCaseLinkTypeId() {
+        var cfg = jiraCfg.getForRuntime();
+        return (cfg.links() != null) ? cfg.links().templateToCase() : null;
+    }
+
+    public TemplateLinkInfo resolveTemplateLinkInfo(String issueId, String linkTypeId) {
         var cfg = jiraCfg.getForRuntime();
 
-        String templateId = req.templateId();
-        if (!isNotBlank(templateId)) {
+        if (!isNotBlank(issueId)) {
             return new TemplateLinkInfo(null, null);
         }
 
-        String linkTypeName = (cfg.links() != null) ? cfg.links().templateToCase() : null;
-        if (!isNotBlank(linkTypeName)) {
+        if (!isNotBlank(linkTypeId)) {
             return new TemplateLinkInfo(null, null);
         }
 
@@ -45,7 +51,7 @@ public class LinkService {
                         cfg.projectKey(),
                         JqlUtils.escapeJql(cfg.issueTypes().template()),
                         JqlUtils.toJqlField(templateIdField),
-                        JqlUtils.escapeJql(templateId)
+                        JqlUtils.escapeJql(issueId)
                 );
 
         JiraModels.SearchResponse search = jira.search(jql, 0, 1);
@@ -63,13 +69,13 @@ public class LinkService {
             return new TemplateLinkInfo(null, null);
         }
 
-        return new TemplateLinkInfo(templateKey, linkTypeName);
+        return new TemplateLinkInfo(templateKey, linkTypeId);
     }
 
-    void ensureLinked(TemplateLinkInfo linkInfo, String caseKey) {
+    public void ensureLinked(TemplateLinkInfo linkInfo, String caseKey) {
         if (!linkInfo.isLinkable() || !isNotBlank(caseKey)) return;
 
-        if (isAlreadyLinked(caseKey, linkInfo.templateKey(), linkInfo.linkTypeName())) {
+        if (isAlreadyLinked(caseKey, linkInfo.templateKey(), linkInfo.linkTypeId())) {
             return;
         }
 
@@ -89,7 +95,7 @@ public class LinkService {
         return Map.of(
                 "issuelinks", List.of(Map.of(
                         "add", Map.of(
-                                "type", Map.of("name", linkInfo.linkTypeName()),
+                                "type", Map.of("id", linkInfo.linkTypeId()),
                                 "outwardIssue", Map.of("key", linkInfo.templateKey())
                         )
                 ))
@@ -99,15 +105,15 @@ public class LinkService {
     public void safeCreateLinkFallback(TemplateLinkInfo linkInfo, String caseKey) {
         try {
             // link: Template (inward) <-> Case (outward) — kierunek nie jest krytyczny dla "Relates"
-            jira.createIssueLink(linkInfo.linkTypeName(), linkInfo.templateKey(), caseKey);
+            jira.createIssueLink(linkInfo.linkTypeId(), linkInfo.templateKey(), caseKey);
         } catch (RuntimeException ex) {
             // MVP: nie blokujemy całego flow, ale logujemy (do diagnostyki)
             log.warn("Failed to create issue link (fallback). template={}, case={}, type={}. {}",
-                    linkInfo.templateKey(), caseKey, linkInfo.linkTypeName(), safeMsg(ex));
+                    linkInfo.templateKey(), caseKey, linkInfo.linkTypeId(), safeMsg(ex));
         }
     }
 
-    private boolean isAlreadyLinked(String caseKey, String templateKey, String linkTypeName) {
+    private boolean isAlreadyLinked(String caseKey, String templateKey, String linkTypeId) {
         try {
             JsonNode issue = jira.getIssue(caseKey, null);
 
@@ -115,8 +121,8 @@ public class LinkService {
             if (!links.isArray()) return false;
 
             for (JsonNode l : links) {
-                String name = l.path("type").path("name").asString(null);
-                if (!linkTypeName.equals(name)) continue;
+                String name = l.path("type").path("id").asString(null);
+                if (!linkTypeId.equals(name)) continue;
 
                 String inKey = l.path("inwardIssue").path("key").asString(null);
                 String outKey = l.path("outwardIssue").path("key").asString(null);
@@ -143,9 +149,9 @@ public class LinkService {
         return m.length() > 240 ? m.substring(0, 240) + "..." : m;
     }
 
-    public record TemplateLinkInfo(String templateKey, String linkTypeName) {
-        boolean isLinkable() {
-            return isNotBlank(templateKey) && isNotBlank(linkTypeName);
+    public record TemplateLinkInfo(String templateKey, String linkTypeId) {
+        public boolean isLinkable() {
+            return isNotBlank(templateKey) && isNotBlank(linkTypeId);
         }
     }
 }

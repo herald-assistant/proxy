@@ -6,6 +6,7 @@ import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.CaseHistoryDtos;
 import com.acme.herald.domain.dto.CaseRef;
 import com.acme.herald.domain.dto.UpsertCase;
+import com.acme.herald.links.LinkService;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.JqlUtils;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,8 @@ import tools.jackson.databind.JsonNode;
 
 import java.util.*;
 
-import static com.acme.herald.smartcase.LinkService.looksLikeIssueLinksNotAllowed;
-import static com.acme.herald.smartcase.LinkService.safeMsg;
+import static com.acme.herald.links.LinkService.looksLikeIssueLinksNotAllowed;
+import static com.acme.herald.links.LinkService.safeMsg;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @Slf4j
@@ -85,7 +86,7 @@ public class CaseService {
             createBody.put("fields", fields);
 
 
-            LinkService.TemplateLinkInfo linkInfo = linkService.resolveTemplateLinkInfo(req);
+            LinkService.TemplateLinkInfo linkInfo = linkService.resolveTemplateLinkInfo(req.templateId(), linkService.templateToCaseLinkTypeId());
             if (linkInfo.isLinkable()) {
                 createBody.put("update", linkService.updateRelatedLinkBody(linkInfo));
             }

@@ -202,4 +202,10 @@ public interface JiraApiV2Client {
             @RequestParam(required = false) String exclude,
             @RequestParam(defaultValue = "20") int maxResults
     );
+
+    @GetMapping(value = REST_API_PREFIX + "/issueLinkType")
+    JiraModels.IssueLinkTypes getIssueLinkTypes(
+            @RequestHeader("Authorization") String auth
+    );
+
 }

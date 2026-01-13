@@ -145,7 +145,7 @@ public class JiraConfigService {
                         "",             // caseStatus (customfield_x)
                         ""              // templateStatus (customfield_x)
                 ),
-                new JiraLinksConfigDto("Implements"),
+                new JiraLinksConfigDto(null, null),
                 new JiraOptionsConfigDto(true, true, false),
                 new JiraStatusConfigDto(
                         Map.of(
@@ -302,7 +302,10 @@ public class JiraConfigService {
 
     private JiraLinksConfigDto normalizeLinks(JiraLinksConfigDto in) {
         if (in == null) return defaultConfig().links();
-        return new JiraLinksConfigDto(nz(in.templateToCase()));
+        return new JiraLinksConfigDto(
+                nz(in.templateToCase()),
+                nz(in.templateToFork())
+        );
     }
 
     private JiraOptionsConfigDto normalizeOptions(JiraOptionsConfigDto in) {

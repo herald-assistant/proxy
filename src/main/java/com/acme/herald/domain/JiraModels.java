@@ -158,4 +158,15 @@ public class JiraModels {
     ) {
     }
 
+    public record IssueLinkTypes(
+            List<IssueLinkType> issueLinkTypes
+    ) {}
+
+    public record IssueLinkType(
+            String id,
+            String name,
+            String inward,
+            String outward
+    ) {}
+
 }
