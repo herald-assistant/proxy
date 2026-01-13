@@ -12,6 +12,7 @@ import tools.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @Service
@@ -30,19 +31,16 @@ public class LinkService {
         return (cfg.links() != null) ? cfg.links().templateToCase() : null;
     }
 
-    public TemplateLinkInfo resolveTemplateLinkInfo(String issueId, String linkTypeId) {
+    public String templateToForkLinkTypeId() {
         var cfg = jiraCfg.getForRuntime();
+        return (cfg.links() != null) ? cfg.links().templateToFork() : null;
+    }
 
-        if (!isNotBlank(issueId)) {
-            return new TemplateLinkInfo(null, null);
-        }
-
-        if (!isNotBlank(linkTypeId)) {
-            return new TemplateLinkInfo(null, null);
-        }
-
+    public TemplateLinkInfo resolveTemplateLinkInfo(String templateId, String linkTypeId) {
+        var cfg = jiraCfg.getForRuntime();
         String templateIdField = (cfg.fields() != null) ? cfg.fields().templateId() : null;
-        if (!isNotBlank(templateIdField)) {
+
+        if (isBlank(templateId) ||  isBlank(linkTypeId) || isBlank(templateIdField)) {
             return new TemplateLinkInfo(null, null);
         }
 
@@ -51,7 +49,7 @@ public class LinkService {
                         cfg.projectKey(),
                         JqlUtils.escapeJql(cfg.issueTypes().template()),
                         JqlUtils.toJqlField(templateIdField),
-                        JqlUtils.escapeJql(issueId)
+                        JqlUtils.escapeJql(templateId)
                 );
 
         JiraModels.SearchResponse search = jira.search(jql, 0, 1);
@@ -60,11 +58,11 @@ public class LinkService {
         }
 
         List<JsonNode> issues = search.issues();
-        if (issues == null || issues.size() == 0) {
+        if (issues == null || issues.isEmpty()) {
             return new TemplateLinkInfo(null, null);
         }
 
-        String templateKey = issues.get(0).path("key").asString(null);
+        String templateKey = issues.getFirst().path("key").asString(null);
         if (!isNotBlank(templateKey)) {
             return new TemplateLinkInfo(null, null);
         }

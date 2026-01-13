@@ -29,7 +29,9 @@ public record UpsertTemplate(
         @NotNull
         JsonNode payload,
 
-        @Schema(description = "Template status value validated against server configuration.",
-                example = "draft")
-        String status
+        @Schema(description = "Template status value validated against server configuration.")
+        String status,
+
+        @Schema(description = "Required to fork template. Used to display result in Hub fork counter.")
+        String sourceTemplateId
 ) {}

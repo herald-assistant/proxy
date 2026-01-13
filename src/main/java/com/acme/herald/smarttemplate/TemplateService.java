@@ -5,23 +5,30 @@ import com.acme.herald.config.JiraProperties;
 import com.acme.herald.domain.JiraModels;
 import com.acme.herald.domain.dto.TemplateRef;
 import com.acme.herald.domain.dto.UpsertTemplate;
+import com.acme.herald.links.LinkService;
 import com.acme.herald.provider.JiraProvider;
 import com.acme.herald.web.JqlUtils;
 import com.acme.herald.web.dto.CommonDtos;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.acme.herald.links.LinkService.looksLikeIssueLinksNotAllowed;
+import static com.acme.herald.links.LinkService.safeMsg;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TemplateService {
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
     private final JiraConfigService jiraCfg;
+    private final LinkService linkService;
 
     public TemplateRef upsertTemplate(UpsertTemplate req) {
         var cfg = jiraCfg.getForRuntime();
@@ -67,20 +74,44 @@ public class TemplateService {
 
         JiraModels.SearchResponse existing = jira.search(jql, 0, 1);
 
-        String issueKey;
+        String templateKey;
         if (existing.total() <= 0 || existing.issues() == null || existing.issues().isEmpty()) {
-            issueKey = jira.createIssue(Map.of("fields", fields)).key();
+            // CREATE
+            Map<String, Object> createBody = new HashMap<>();
+            createBody.put("fields", fields);
+
+            LinkService.TemplateLinkInfo linkInfo = linkService.resolveTemplateLinkInfo(req.sourceTemplateId(), linkService.templateToForkLinkTypeId());
+            if (linkInfo.isLinkable()) {
+                createBody.put("update", linkService.updateRelatedLinkBody(linkInfo));
+            }
+
+            try {
+                templateKey = jira.createIssue(createBody).key();
+            } catch (RuntimeException e) {
+                if (linkInfo.isLinkable() && looksLikeIssueLinksNotAllowed(e)) {
+                    log.warn("Create with update.issuelinks failed; falling back to create+issueLink. {}", safeMsg(e));
+                    templateKey = jira.createIssue(Map.of("fields", fields)).key();
+                    linkService.safeCreateLinkFallback(linkInfo, templateKey);
+                } else {
+                    throw e;
+                }
+            }
+
+            if (linkInfo.isLinkable()) {
+                linkService.ensureLinked(linkInfo, templateKey);
+            }
         } else {
+            // UPDATE
             var issue = existing.issues().getFirst();
-            issueKey = issue.path("key").asString();
-            if (!isNotBlank(issueKey)) {
+            templateKey = issue.path("key").asString();
+            if (!isNotBlank(templateKey)) {
                 throw new IllegalStateException("Jira search returned issue without key for jql: " + jql);
             }
-            jira.updateIssue(issueKey, Map.of("fields", fields));
+            jira.updateIssue(templateKey, Map.of("fields", fields));
         }
 
-        String url = jiraProps.getBaseUrl() + "/browse/" + issueKey;
-        return new TemplateRef(issueKey, url);
+        String url = jiraProps.getBaseUrl() + "/browse/" + templateKey;
+        return new TemplateRef(templateKey, url);
     }
 
     public void like(String issueKey, CommonDtos.LikeReq req) {
