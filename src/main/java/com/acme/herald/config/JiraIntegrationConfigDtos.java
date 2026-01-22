@@ -105,6 +105,9 @@ public final class JiraIntegrationConfigDtos {
             @Schema(description = "Issue key used as a storage container for Template Hub Challenges (issue properties). When empty, challenges are disabled.",
                     example = "ABC-2")
             String challengesIssueKey,
+            @Schema(description = "Issue key used as a storage container for Template Hub Feedback (issue properties). When empty, feedbacks are disabled.",
+                    example = "ABC-2")
+            String feedbackIssueKey,
             UiBannerDto banner
     ) {}
 
@@ -251,6 +254,7 @@ public final class JiraIntegrationConfigDtos {
             JiraAccessConfigDto access,
             String userPrefsIssueKey,
             String challengesIssueKey,
+            String feedbackIssueKey,
             UiBannerDto banner
     ) {}
 }

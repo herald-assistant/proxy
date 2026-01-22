@@ -25,7 +25,7 @@ public class LinkController {
             summary = "List Jira issue link types",
             description = "Returns available issue link types (name/inward/outward) used to configure template relations."
     )
-    public ResponseEntity<List<JiraModels.IssueLinkType>> list() {
+    public ResponseEntity<List<JiraModels.IssueLinkType>> listLinkTypes() {
         return ResponseEntity.ok(service.list());
     }
 }
