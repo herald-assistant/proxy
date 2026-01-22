@@ -52,6 +52,7 @@ public class JiraConfigService {
                 normalizeStatus(incoming.status()),
                 normalizeAccess(incoming.access()),
                 nz(incoming.userPrefsIssueKey()),
+                nz(incoming.challengesIssueKey()),
                 normalizeBanner(incoming.banner())
         );
 
@@ -122,6 +123,7 @@ public class JiraConfigService {
                 s.status(),
                 s.access(),
                 s.userPrefsIssueKey(),
+                s.challengesIssueKey(),
                 s.banner()
         );
     }
@@ -165,6 +167,7 @@ public class JiraConfigService {
                 ),
                 new JiraAccessConfigDto(List.of(), List.of()),
                 "", // userPrefsIssueKey,
+                "", // challengesIssueKey,
                 new UiBannerDto("", DEFAULT_BANNER_COLOR)
         );
     }
@@ -182,6 +185,7 @@ public class JiraConfigService {
                 (s != null && s.status() != null ? mergeStatusWithDefaults(s.status(), d.status()) : d.status()),
                 (s != null && s.access() != null ? s.access() : d.access()),
                 pick(s != null ? s.userPrefsIssueKey() : null, d.userPrefsIssueKey()),
+                pick(s != null ? s.challengesIssueKey() : null, d.challengesIssueKey()),
                 (s != null && s.banner() != null ? normalizeBanner(s.banner()) : d.banner()) // NEW
         );
     }

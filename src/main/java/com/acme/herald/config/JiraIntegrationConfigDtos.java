@@ -102,6 +102,9 @@ public final class JiraIntegrationConfigDtos {
             @Schema(description = "Issue key used as a storage container for user profile preferences. When empty, profile updates are disabled.",
                     example = "ABC-1")
             String userPrefsIssueKey,
+            @Schema(description = "Issue key used as a storage container for Template Hub Challenges (issue properties). When empty, challenges are disabled.",
+                    example = "ABC-2")
+            String challengesIssueKey,
             UiBannerDto banner
     ) {}
 
@@ -247,6 +250,7 @@ public final class JiraIntegrationConfigDtos {
             JiraStatusConfigDto status,
             JiraAccessConfigDto access,
             String userPrefsIssueKey,
+            String challengesIssueKey,
             UiBannerDto banner
     ) {}
 }
