@@ -21,7 +21,7 @@ public class LlmProxyController {
     @PostMapping(value = "/chat", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Chat (simplified reply)",
-            description = "Executes a chat completion using a model identified by request.model (modelId from the admin catalog) and returns a simplified reply (text + finish_reason + usage + small raw metadata)."
+            description = "Executes a chat completion using a model identified by request.model (modelId from the admin catalog) and returns a simplified reply."
     )
     public ResponseEntity<ChatDtos.ProxyReply> chat(@RequestBody ChatDtos.ChatRequest request) {
         var out = service.chat(request);

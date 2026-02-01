@@ -1,20 +1,25 @@
 package com.acme.herald.ai;
 
 import com.acme.herald.auth.CryptoService;
-import com.acme.herald.domain.ChatDtos;
-import com.acme.herald.config.LlmIntegrationDtos.*;
+import com.acme.herald.auth.MeService;
 import com.acme.herald.config.LlmConfigService;
-import tools.jackson.databind.JsonNode;
+import com.acme.herald.config.LlmIntegrationDtos.StoredCatalog;
+import com.acme.herald.config.LlmIntegrationDtos.StoredGitHubCopilot;
+import com.acme.herald.config.LlmIntegrationDtos.StoredModel;
+import com.acme.herald.domain.ChatDtos;
+import com.acme.herald.web.error.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -23,6 +28,7 @@ public class LlmProxyService {
 
     private final RestClient rest;
     private final LlmConfigService llmConfig;
+    private final MeService meService;
     private final CryptoService crypto;
     private final JsonMapper jsonMapper;
 
@@ -48,10 +54,15 @@ public class LlmProxyService {
 
     /**
      * Zwraca pełny ChatResponse upstream.
-     * req.model() = modelId z katalogu admina (np. "openai_gpt4o").
+     * req.model() = modelId z katalogu admina (np. "openai_gpt4o" / "copilot_gpt4o").
+     *
+     * Token NIE przychodzi z FE — jest dobierany po stronie proxy:
+     * - zwykłe modele: tokenEnc z katalogu (project property)
+     * - Copilot: user token z profilu lub global PAT z katalogu
      */
     public ChatDtos.ChatResponse chatRaw(ChatDtos.ChatRequest req) {
-        LlmCatalogModelDto cfg = llmConfig.findEnabledModelInternalOrThrow(req.model());
+        StoredCatalog stored = llmConfig.getStoredForRuntime(); // includes encrypted secrets
+        StoredModel cfg = findEnabledModelOrThrow(stored, req.model());
 
         String upstreamModelName = (cfg.model() == null ? "" : cfg.model().trim());
         if (upstreamModelName.isEmpty()) {
@@ -59,7 +70,8 @@ public class LlmProxyService {
         }
 
         String url = resolveChatCompletionsUrl(cfg);
-        String bearer = decryptBearerOrThrow(cfg);
+
+        String bearer = resolveBearerToken(stored, cfg);
 
         Double temperature = req.temperature() != null ? req.temperature()
                 : (cfg.defaults() != null ? cfg.defaults().temperature() : null);
@@ -67,7 +79,6 @@ public class LlmProxyService {
 
         Integer maxTokens = req.max_tokens() != null ? req.max_tokens()
                 : (cfg.defaults() != null ? cfg.defaults().maxTokens() : null);
-
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", upstreamModelName);
@@ -80,17 +91,14 @@ public class LlmProxyService {
         boolean appliedMaxTokensFix = false;
         boolean removedTemperature = false;
 
-        // max 3 próby: (1) normal, (2) po pierwszym fallbacku, (3) po drugim fallbacku
         for (int attempt = 1; attempt <= 3; attempt++) {
             try {
                 return doPost(cfg, url, bearer, payload);
             } catch (UpstreamException e) {
-                // fallbacki tylko dla 400
                 if (e.status() != 400) throw e;
 
                 String unsupportedParam = detectUnsupportedParam(e.body());
 
-                // Fallback #1: max_tokens -> max_completion_tokens
                 if (!appliedMaxTokensFix
                         && "max_tokens".equals(unsupportedParam)
                         && payload.containsKey("max_tokens")) {
@@ -99,29 +107,94 @@ public class LlmProxyService {
                     if (mt != null) payload.put("max_completion_tokens", mt);
 
                     appliedMaxTokensFix = true;
-                    continue; // retry
+                    continue;
                 }
 
-                // Fallback #2: usuń temperature
                 if (!removedTemperature
                         && "temperature".equals(unsupportedParam)
                         && payload.containsKey("temperature")) {
 
                     payload.remove("temperature");
                     removedTemperature = true;
-                    continue; // retry
+                    continue;
                 }
 
-                // Jeśli nie pasuje do fallbacków -> propaguj błąd
                 throw e;
             }
         }
 
-        // Teoretycznie nieosiągalne (bo pętla zawsze return/throw), ale dla spokoju kompilatora:
         throw new IllegalStateException("LLM proxy retry loop ended unexpectedly for modelId=" + cfg.id());
     }
 
-    private ChatDtos.ChatResponse doPost(LlmCatalogModelDto cfg, String url, String bearer, Map<String, Object> payload) {
+    // ─────────────────────────────────────────────────────────────────
+    // Token resolution
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Reguły tokena:
+     * - jeśli model.githubCopilotModel=true:
+     *    - jeśli stored.githubCopilot.useUserToken=true -> token z profilu użytkownika (issue property)
+     *    - else -> global PAT z katalogu (stored.githubCopilot.patEnc)
+     * - else -> token modelu z katalogu (cfg.tokenEnc)
+     */
+    private String resolveBearerToken(StoredCatalog stored, StoredModel cfg) {
+        boolean isCopilotModel = Boolean.TRUE.equals(cfg.githubCopilotModel());
+
+        if (isCopilotModel) {
+            StoredGitHubCopilot cop = stored.githubCopilot();
+            boolean useUserToken = cop != null && Boolean.TRUE.equals(cop.useUserToken());
+
+            if (useUserToken) {
+                String userToken = meService.getMyGithubCopilotTokenOrNull();
+                if (userToken == null || userToken.isBlank()) {
+                    throw new UnauthorizedException(
+                            "Brak tokena GitHub Copilot w profilu użytkownika. Ustaw go w 'Mój profil' (GitHub Copilot token)."
+                    );
+                }
+                return userToken.trim(); // już plaintext
+            }
+
+            // global PAT
+            String patEnc = (cop != null) ? cop.patEnc() : null;
+            if (patEnc == null || patEnc.isBlank()) {
+                throw new IllegalStateException("Copilot: useUserToken=false, ale brak globalnego PAT w konfiguracji admina.");
+            }
+            return decryptSecret(patEnc);
+        }
+
+        // zwykły model: tokenEnc z katalogu
+        String tokenEnc = cfg.tokenEnc();
+        if (tokenEnc == null || tokenEnc.isBlank()) {
+            throw new IllegalStateException("Model '%s' nie ma ustawionego tokena w konfiguracji admina.".formatted(cfg.id()));
+        }
+        return decryptSecret(tokenEnc);
+    }
+
+    private String decryptSecret(String enc) {
+        byte[] plain = crypto.decrypt(enc);
+        String token = new String(plain, StandardCharsets.UTF_8).trim();
+        if (token.isEmpty()) throw new IllegalStateException("Zdekryptowany token jest pusty.");
+        return token;
+    }
+
+    private StoredModel findEnabledModelOrThrow(StoredCatalog stored, String modelId) {
+        String id = (modelId == null ? "" : modelId.trim());
+        if (id.isEmpty()) throw new IllegalArgumentException("Brak modelId w request.model");
+
+        List<StoredModel> models = stored.models() != null ? stored.models() : List.of();
+
+        return models.stream()
+                .filter(m -> id.equals((m.id() == null ? "" : m.id()).trim()))
+                .filter(m -> Boolean.TRUE.equals(m.enabled()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Model '%s' nie istnieje lub jest wyłączony".formatted(id)));
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // HTTP call
+    // ─────────────────────────────────────────────────────────────────
+
+    private ChatDtos.ChatResponse doPost(StoredModel cfg, String url, String bearer, Map<String, Object> payload) {
         return rest.post()
                 .uri(url)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -135,11 +208,6 @@ public class LlmProxyService {
                 .body(ChatDtos.ChatResponse.class);
     }
 
-    /**
-     * Próbuje wyciągnąć error.param z body w stylu OpenAI:
-     * { "error": { "code":"unsupported_parameter", "param":"temperature", ... } }
-     * Jak się nie da, robi prosty fallback string-match.
-     */
     private String detectUnsupportedParam(String exceptionBody) {
         if (exceptionBody == null || exceptionBody.isBlank()) return null;
 
@@ -148,36 +216,15 @@ public class LlmProxyService {
             JsonNode err = root.path("error");
             String code = err.path("code").asString("");
             String param = err.path("param").asString("");
-            if ("unsupported_parameter".equals(code) && !param.isBlank()) {
-                return param;
-            }
-        } catch (Exception ignored) {
-            // ignore
-        }
+            if ("unsupported_parameter".equals(code) && !param.isBlank()) return param;
+        } catch (Exception ignored) {}
 
-        // string fallback (tani i odporny)
         if (exceptionBody.contains("'max_tokens'")) return "max_tokens";
         if (exceptionBody.contains("'temperature'")) return "temperature";
-
         return null;
     }
 
-    private String decryptBearerOrThrow(LlmCatalogModelDto cfg) {
-        String enc = cfg.token();
-        boolean present = Boolean.TRUE.equals(cfg.tokenPresent());
-
-        if ((enc == null || enc.isBlank()) && present) {
-            throw new IllegalStateException("Model '%s' ma tokenSet=true, ale brak token w konfiguracji".formatted(cfg.id()));
-        }
-        if (enc == null || enc.isBlank()) {
-            throw new IllegalArgumentException("Model '%s' nie ma ustawionego tokena".formatted(cfg.id()));
-        }
-
-        byte[] plain = crypto.decrypt(enc);
-        return new String(plain, StandardCharsets.UTF_8).trim();
-    }
-
-    private String resolveChatCompletionsUrl(LlmCatalogModelDto cfg) {
+    private String resolveChatCompletionsUrl(StoredModel cfg) {
         String base = cfg.baseUrl() != null ? cfg.baseUrl().trim() : "";
         if (base.isEmpty()) {
             throw new IllegalArgumentException("Model '%s' nie ma ustawionego baseUrl".formatted(cfg.id()));
@@ -189,7 +236,7 @@ public class LlmProxyService {
         return base + "/chat/completions";
     }
 
-    private UpstreamException toUpstreamException(LlmCatalogModelDto cfg, ClientHttpResponse response) {
+    private UpstreamException toUpstreamException(StoredModel cfg, ClientHttpResponse response) {
         int status = safeStatus(response);
         String body = safeBody(response);
 
@@ -216,9 +263,6 @@ public class LlmProxyService {
         }
     }
 
-    /**
-     * Własny wyjątek z status+body, żeby robić fallbacki.
-     */
     static final class UpstreamException extends RuntimeException {
         private final String modelId;
         private final int status;
@@ -231,16 +275,8 @@ public class LlmProxyService {
             this.body = body;
         }
 
-        public String modelId() {
-            return modelId;
-        }
-
-        public int status() {
-            return status;
-        }
-
-        public String body() {
-            return body;
-        }
+        public String modelId() { return modelId; }
+        public int status() { return status; }
+        public String body() { return body; }
     }
 }

@@ -33,6 +33,18 @@ public class LlmConfigService {
     private final CryptoService crypto;
 
     // ─────────────────────────────────────────────────────────────────
+    // Runtime usage: encrypted secrets in-memory (NO admin requirement)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Runtime (proxy): zwraca StoredCatalog z zaszyfrowanymi sekretami.
+     * NIE jest to endpoint HTTP, więc nie ma ryzyka "wycieku" przez OpenAPI.
+     */
+    public StoredCatalog getStoredForRuntime() {
+        return loadStored(); // includes tokenEnc + patEnc
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // Public (admin) view: NO SECRETS
     // ─────────────────────────────────────────────────────────────────
 
@@ -76,11 +88,10 @@ public class LlmConfigService {
     // ─────────────────────────────────────────────────────────────────
 
     public void upsertLlmCatalog(LlmCatalogDto incoming) {
-        requireProjectAdmin(); // 👈 autoryzacja
+        requireProjectAdmin();
 
         StoredCatalog current = loadStored();
 
-        // --- models: preserve per-model tokenEnc when token omitted ---
         Map<String, StoredModel> byId = new HashMap<>();
         for (StoredModel m : ofNullable(current.models()).orElse(List.of())) {
             if (m != null && m.id() != null) byId.put(m.id(), m);
@@ -93,7 +104,6 @@ public class LlmConfigService {
             StoredModel prev = byId.get(m.id());
             String tokenEnc = (prev != null) ? prev.tokenEnc() : null;
 
-            // token write-only: jeśli przyszedł -> nadpisz, jeśli nie -> zostaw
             String tokenPlain = m.token();
             if (tokenPlain != null && !tokenPlain.trim().isEmpty()) {
                 tokenEnc = crypto.encrypt(tokenPlain.trim().getBytes(StandardCharsets.UTF_8));
@@ -114,7 +124,6 @@ public class LlmConfigService {
             ));
         }
 
-        // --- github copilot: preserve PAT when omitted ---
         StoredGitHubCopilot prevCopilot = current.githubCopilot();
         GitHubCopilotConfigDto inCopilot = incoming.githubCopilot();
 
@@ -142,22 +151,8 @@ public class LlmConfigService {
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Internal usage: includes encrypted secrets in-memory (NOT for HTTP)
+    // Internal/admin-only: includes encrypted secrets in-memory (if needed)
     // ─────────────────────────────────────────────────────────────────
-
-    public LlmCatalogModelDto findEnabledModelInternalOrThrow(String modelId) {
-        var id = (modelId == null ? "" : modelId.trim());
-        if (id.isEmpty()) throw new IllegalArgumentException("Brak modelId w request.model");
-
-        var cat = getCatalogInternal();
-        var models = cat.models() != null ? cat.models() : List.<LlmCatalogModelDto>of();
-
-        return models.stream()
-                .filter(m -> id.equals((m.id()).trim()))
-                .filter(m -> Boolean.TRUE.equals(m.enabled()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Model '%s' nie istnieje lub jest wyłączony".formatted(id)));
-    }
 
     public LlmCatalogDto getCatalogInternal() {
         requireProjectAdmin();
