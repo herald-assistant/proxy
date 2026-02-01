@@ -42,7 +42,7 @@ public class OpenApiConfig {
             log.error("Feign error on {}: status={}, reason={}, body={}",
                     methodKey, response.status(), response.reason(), body);
 
-            return new RuntimeException("Feign error " + response.status() + " for " + methodKey);
+            return new RuntimeException("Feign error " + response.status() + " for " + methodKey + "with body:" + body);
         };
     }
 }

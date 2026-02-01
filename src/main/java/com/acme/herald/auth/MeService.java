@@ -14,6 +14,7 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
@@ -25,9 +26,12 @@ public class MeService {
     private static final String PROFILE_PREFIX = "herald.user-profile.v1.";
     private static final JsonNodeFactory NF = JsonNodeFactory.instance;
 
+    private static final String COPILOT_TOKEN_ENC_KEY = "githubCopilotTokenEnc";
+
     private final JiraProvider jira;
     private final JiraProperties jiraProps;
     private final JiraConfigService jiraConfigService;
+    private final CryptoService crypto;
 
     public MeContextDtos.MeContext context() {
         var user = jira.getMe();
@@ -55,51 +59,93 @@ public class MeService {
         var propKey = profilePropertyKey(user);
         var now = Instant.now().toString();
 
-        // request do Jiry: spokojnie może zostać Mapą (serialize -> JSON)
-        var value = Map.<String, Object>of(
-                "version", 1,
-                "updatedAt", now,
-                "userKey", safeUserKey(user),
-                "explainUserDescription", req.explainUserDescription(),
-                "notifyNewTemplates", req.notifyNewTemplates()
-        );
+        JsonNode existingRaw = jira.getIssueProperty(prefsIssueKey, propKey);
+        JsonNode existing = unwrapJiraPropertyValue(existingRaw);
+
+        String existingTokenEnc = strOrNull(existing.get(COPILOT_TOKEN_ENC_KEY));
+
+        // ── token logic ─────────────────────────────
+        String newTokenEnc = existingTokenEnc;
+
+        // clear wins
+        if (req.clearGithubCopilotToken()) {
+            newTokenEnc = null;
+        } else {
+            String incomingToken = req.githubCopilotToken();
+            if (incomingToken != null && !incomingToken.trim().isEmpty()) {
+                newTokenEnc = crypto.encrypt(incomingToken.trim().getBytes(StandardCharsets.UTF_8));
+            }
+        }
+
+        // ── build value ─────────────────────────────
+        var value = new HashMap<String, Object>();
+        value.put("version", 1);
+        value.put("updatedAt", now);
+        value.put("userKey", safeUserKey(user));
+        value.put("explainUserDescription", req.explainUserDescription());
+        value.put("notifyNewTemplates", req.notifyNewTemplates());
+
+        if (newTokenEnc != null && !newTokenEnc.isBlank()) {
+            value.put(COPILOT_TOKEN_ENC_KEY, newTokenEnc);
+        }
 
         jira.setIssueProperty(prefsIssueKey, propKey, value);
 
         return new MeContextDtos.UserProfilePrefs(
                 req.explainUserDescription(),
                 req.notifyNewTemplates(),
-                now
+                now,
+                (newTokenEnc != null && !newTokenEnc.isBlank())
         );
     }
 
     // ─────────────────────────────────────────────
+
+    public String getMyGithubCopilotTokenOrNull() {
+        var user = jira.getMe();
+        return getGithubCopilotTokenOrNull(user);
+    }
+
+    public String getGithubCopilotTokenOrNull(JiraModels.UserResponse user) {
+        var prefsIssueKey = getUserPrefsIssueKey();
+        if (!isNotBlank(prefsIssueKey)) return null;
+
+        var propKey = profilePropertyKey(user);
+        JsonNode raw = jira.getIssueProperty(prefsIssueKey, propKey);
+        JsonNode v = unwrapJiraPropertyValue(raw);
+
+        String enc = strOrNull(v.get(COPILOT_TOKEN_ENC_KEY));
+        if (enc == null) return null;
+
+        byte[] plain = crypto.decrypt(enc);
+        String token = new String(plain, StandardCharsets.UTF_8).trim();
+        return token.isEmpty() ? null : token;
+    }
 
     private MeContextDtos.UserProfilePrefs loadProfilePrefs(JiraModels.UserResponse user) {
         var prefsIssueKey = getUserPrefsIssueKey();
         var propKey = profilePropertyKey(user);
 
         if (!isNotBlank(prefsIssueKey)) {
-            return new MeContextDtos.UserProfilePrefs("", false, null);
+            return new MeContextDtos.UserProfilePrefs("", false, null, false);
         }
 
-        JsonNode v = jira.getIssueProperty(prefsIssueKey, propKey);
+        JsonNode raw = jira.getIssueProperty(prefsIssueKey, propKey);
+        JsonNode v = unwrapJiraPropertyValue(raw);
 
         if (v == null || v.isMissingNode() || v.isNull() || (v.isObject() && v.size() == 0)) {
-            return new MeContextDtos.UserProfilePrefs("", false, null);
+            return new MeContextDtos.UserProfilePrefs("", false, null, false);
         }
 
         String desc = v.path("explainUserDescription").asString("");
         boolean notify = bool(v.get("notifyNewTemplates"));
         String updatedAt = strOrNull(v.get("updatedAt"));
 
-        return new MeContextDtos.UserProfilePrefs(desc, notify, updatedAt);
+        boolean tokenPresent = strOrNull(v.get(COPILOT_TOKEN_ENC_KEY)) != null;
+
+        return new MeContextDtos.UserProfilePrefs(desc, notify, updatedAt, tokenPresent);
     }
 
-    /**
-     * Jira issue property response zwykle: { "key": "...", "value": { ... } }
-     * Ale czasem możesz dostać już samą wartość.
-     */
     private static JsonNode unwrapJiraPropertyValue(JsonNode raw) {
         if (raw == null || raw.isMissingNode() || raw.isNull()) return NF.objectNode();
 
@@ -107,8 +153,6 @@ public class MeService {
         if (value != null && !value.isNull() && !value.isMissingNode()) {
             return value;
         }
-
-        // fallback: traktuj raw jako wartość
         return raw;
     }
 
@@ -151,7 +195,6 @@ public class MeService {
         if (n == null || n.isNull() || n.isMissingNode()) return false;
         if (n.isBoolean()) return n.booleanValue();
 
-        // Jira property bywa stringiem
         String s = n.asString("").trim().toLowerCase();
         return s.equals("true") || s.equals("1") || s.equals("yes") || s.equals("y") || s.equals("on");
     }
