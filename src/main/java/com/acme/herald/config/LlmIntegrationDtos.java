@@ -18,7 +18,25 @@ public final class LlmIntegrationDtos {
 
             @Schema(description = "List of catalog models available to the proxy.", example = "[]")
             @Valid
-            List<LlmCatalogModelDto> models
+            List<LlmCatalogModelDto> models,
+
+            @Schema(description = "Optional GitHub Copilot integration configuration (applies to models marked as githubCopilotModel).")
+            @Valid
+            GitHubCopilotConfigDto githubCopilot
+    ) {}
+
+    @Schema(description = "GitHub Copilot integration configuration stored in project property (secrets write-only).")
+    public record GitHubCopilotConfigDto(
+
+            @Schema(description = "If true, proxy will require per-user GitHub token (Copilot user). If false, proxy may use globalPat.", example = "true")
+            Boolean useUserToken,
+
+            @Schema(description = "Write-only GitHub Fine-Grained PAT used globally by the proxy when useUserToken=false. If omitted/blank, previous is kept.", example = "github_pat_***")
+            @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+            String globalPat,
+
+            @Schema(description = "Indicates whether an encrypted global PAT is already stored.", example = "true")
+            Boolean globalPatPresent
     ) {}
 
     @Schema(description = "A single LLM model entry in the catalog.")
@@ -53,6 +71,9 @@ public final class LlmIntegrationDtos {
             @Schema(description = "Default inference parameters applied by the proxy when not provided by the client.", example = "{\"temperature\":0.2,\"maxTokens\":9600}")
             @Valid
             LlmModelDefaultsDto defaults,
+
+            @Schema(description = "Marks this catalog entry as a GitHub Copilot-backed model (token handling is controlled by githubCopilot config).", example = "false")
+            Boolean githubCopilotModel,
 
             @Schema(description = "Write-only access token for the Provider. If omitted or blank, the previous token is kept.", example = "sk-live-***")
             @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -92,13 +113,18 @@ public final class LlmIntegrationDtos {
     ) {}
 
     // ─────────────────────────────────────────────────────────────
-    // Internal storage models (not required in OpenAPI, but convenient
-    // to keep in the same file). No @Schema needed.
+    // Internal storage models (persisted in Jira Project Property).
     // ─────────────────────────────────────────────────────────────
 
     public record StoredCatalog(
             Integer version,
-            List<StoredModel> models
+            List<StoredModel> models,
+            StoredGitHubCopilot githubCopilot
+    ) {}
+
+    public record StoredGitHubCopilot(
+            Boolean useUserToken,
+            String patEnc
     ) {}
 
     public record StoredModel(
@@ -111,6 +137,7 @@ public final class LlmIntegrationDtos {
             String notes,
             LlmModelSupportsDto supports,
             LlmModelDefaultsDto defaults,
+            Boolean githubCopilotModel,
             String tokenEnc
     ) {}
 }
