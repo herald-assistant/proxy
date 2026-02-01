@@ -1,0 +1,9 @@
+{
+  "name": "node-copilot-sdk",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@github/copilot-sdk": "^0.1.20",
+    "express": "^5.2.1"
+  }
+}

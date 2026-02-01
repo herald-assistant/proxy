@@ -101,6 +101,26 @@ services:
     environment:
       CATALINA_OPTS: "-Xms512m -Xmx1024m"
       JIRA_BASE_URL: "http://jira:8080"
+
+  copilot-proxy:
+    build:
+      context: node-copilot-sdk
+      dockerfile: Dockerfile
+    container_name: copilot-proxy
+    ports:
+      - "8788:8788"
+    environment:
+      PORT: "8788"
+      NODE_ENV: "production"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://localhost:8788/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
 volumes:
