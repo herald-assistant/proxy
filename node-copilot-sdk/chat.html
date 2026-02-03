@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Copilot Proxy Chat (localhost:8788)</title>
+    <style>
+        :root { color-scheme: dark; }
+        body {
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+            background: #0b1020;
+            color: #e7ecff;
+        }
+        header {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            background: rgba(9, 13, 27, .8);
+            position: sticky;
+            top: 0;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+        header .title {
+            font-weight: 700;
+            letter-spacing: .2px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        header .badge {
+            font-size: 12px;
+            padding: 2px 8px;
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 999px;
+            opacity: .9;
+        }
+
+        .wrap {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            min-height: calc(100vh - 56px);
+        }
+        @media (max-width: 980px) {
+            .wrap { grid-template-columns: 1fr; }
+        }
+
+        .panel {
+            border-right: 1px solid rgba(255,255,255,.08);
+            padding: 16px;
+            background: rgba(10, 14, 30, .55);
+        }
+        @media (max-width: 980px) {
+            .panel { border-right: none; border-bottom: 1px solid rgba(255,255,255,.08); }
+        }
+
+        label { display:block; font-size: 12px; opacity: .85; margin: 14px 0 6px; }
+        input, select, textarea {
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,.14);
+            background: rgba(0,0,0,.28);          /* było jaśniejsze */
+            color: #e7ecff;
+            padding: 10px 12px;
+            outline: none;
+        }
+        select {
+            color-scheme: dark;
+            background: rgba(0,0,0,.32);
+            color: #e7ecff;
+        }
+
+        select option {
+            background: #0b1020;                  /* tło listy */
+            color: #e7ecff;                       /* czcionka listy */
+        }
+
+        /* Placeholder/„pusta” opcja mniej krzykliwa */
+        select option[value=""] {
+            color: rgba(231,236,255,.65);
+        }
+        input:focus, select:focus, textarea:focus {
+            border-color: rgba(120,170,255,.65);
+            box-shadow: 0 0 0 3px rgba(120,170,255,.15);
+        }
+
+        .row { display:flex; gap: 10px; }
+        .row > * { flex: 1; }
+
+        .hint {
+            margin-top: 8px;
+            font-size: 12px;
+            opacity: .75;
+            line-height: 1.35;
+        }
+        .hint code {
+            padding: 1px 6px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,.12);
+            background: rgba(255,255,255,.06);
+        }
+
+        .checkbox {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 13px;
+            opacity: .92;
+            user-select: none;
+        }
+        .checkbox input { width: 18px; height: 18px; margin: 0; }
+
+        .chat {
+            display: grid;
+            grid-template-rows: 1fr auto;
+            min-height: 0;
+        }
+
+        .log {
+            padding: 16px;
+            overflow: auto;
+        }
+
+        .msg {
+            max-width: 900px;
+            margin: 0 auto 12px auto;
+            padding: 12px 12px;
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 14px;
+            background: rgba(255,255,255,.05);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        .msg .meta {
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
+            margin-bottom: 8px;
+            opacity: .9;
+        }
+        .msg .role {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            text-transform: uppercase;
+        }
+        .msg .time { font-size: 12px; opacity: .7; }
+        .msg.user { border-color: rgba(120,170,255,.22); background: rgba(120,170,255,.06); }
+        .msg.assistant { border-color: rgba(255,213,106,.22); background: rgba(255,213,106,.05); }
+        .msg.system { border-style: dashed; opacity: .95; }
+
+        .composer {
+            border-top: 1px solid rgba(255,255,255,.08);
+            padding: 12px;
+            background: rgba(9, 13, 27, .75);
+            backdrop-filter: blur(10px);
+        }
+
+        .composer-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 120px;
+            gap: 10px;
+            align-items: end;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 76px;
+            max-height: 240px;
+            line-height: 1.35;
+        }
+
+        /* --- Buttons: bardziej „pasujące do tła” --- */
+        button {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+
+            font-weight: 700;
+            letter-spacing: .2px;
+
+            /* ciemna baza, subtelny gradient */
+            background: linear-gradient(
+                    180deg,
+                    rgba(255,255,255,.06),
+                    rgba(0,0,0,.18)
+            );
+
+            /* delikatna ramka */
+            border: 1px solid rgba(255,255,255,.12);
+
+            color: rgba(231,236,255,.92);
+
+            transition:
+                    transform .06s ease,
+                    background .15s ease,
+                    border-color .15s ease,
+                    box-shadow .15s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(
+                    180deg,
+                    rgba(255,255,255,.08),
+                    rgba(0,0,0,.22)
+            );
+            border-color: rgba(255,255,255,.18);
+            box-shadow:
+                    0 0 0 3px rgba(120,170,255,.10),
+                    0 10px 30px rgba(0,0,0,.35);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:focus-visible {
+            outline: none;
+            border-color: rgba(120,170,255,.55);
+            box-shadow:
+                    0 0 0 3px rgba(120,170,255,.18),
+                    0 12px 40px rgba(0,0,0,.40);
+        }
+
+        /* Primary: nadal „specjalny”, ale wpasowany w tło */
+        button.primary {
+            background: linear-gradient(
+                    135deg,
+                    rgba(120,170,255,.22),
+                    rgba(255,213,106,.12)
+            );
+            border-color: rgba(255,255,255,.18);
+            color: rgba(255,255,255,.96);
+        }
+
+        button.primary:hover {
+            background: linear-gradient(
+                    135deg,
+                    rgba(120,170,255,.28),
+                    rgba(255,213,106,.16)
+            );
+            border-color: rgba(255,255,255,.22);
+            box-shadow:
+                    0 0 0 3px rgba(255,213,106,.10),
+                    0 0 0 6px rgba(120,170,255,.10),
+                    0 12px 40px rgba(0,0,0,.42);
+        }
+
+        /* Disabled: spokojny, „wtopiony” */
+        button:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            background: rgba(255,255,255,.04);
+            border-color: rgba(255,255,255,.08);
+            color: rgba(231,236,255,.60);
+        }
+
+
+        .status {
+            margin-top: 12px;
+            font-size: 12px;
+            opacity: .85;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,.10);
+            background: rgba(255,255,255,.04);
+            white-space: pre-wrap;
+        }
+
+        .tiny-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .tiny-actions button { width: auto; flex: 1; }
+
+        .sep { height: 1px; background: rgba(255,255,255,.08); margin: 14px 0; }
+
+        /* --- Button loader (spinner) --- */
+        #sendBtn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        #sendBtn .btn-spinner {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(231,236,255,.35);
+            border-top-color: rgba(231,236,255,.92);
+            display: none;            /* domyślnie ukryty */
+            animation: spin .8s linear infinite;
+        }
+
+        #sendBtn.is-loading .btn-spinner {
+            display: inline-block;
+        }
+
+        #sendBtn.is-loading .btn-text {
+            opacity: .95;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+<header>
+    <div class="title">
+        <span>🧠 Copilot Proxy Chat</span>
+        <span class="badge">localhost:8788</span>
+    </div>
+</header>
+
+<div class="wrap">
+    <aside class="panel">
+        <label for="baseUrl">Adres backendu</label>
+        <input id="baseUrl" value="http://localhost:8788" />
+
+        <label for="token">GitHub token (Authorization: Bearer …)</label>
+        <input id="token" type="password" placeholder="wklej token tutaj" autocomplete="off" />
+
+        <div class="checkbox">
+            <input id="rememberToken" type="checkbox" />
+            <label for="rememberToken" style="margin:0;">Zapamiętaj token w localStorage (ryzykowne na współdzielonym PC)</label>
+        </div>
+
+        <div class="sep"></div>
+
+        <label for="model">Model</label>
+        <select id="model">
+            <option value="">(najpierw podaj token i kliknij „Odśwież modele”)</option>
+        </select>
+
+        <div class="tiny-actions">
+            <button id="refreshModelsBtn" type="button">Odśwież modele</button>
+            <button id="clearChatBtn" type="button">Wyczyść chat</button>
+        </div>
+
+        <div class="hint">
+            Skróty: <code>Enter</code> wysyła • <code>Shift+Enter</code> nowa linia • <code>Ctrl+Enter</code> wysyła
+            <br/>
+            UI nie ma „temperature”, bo Copilot SDK nie udostępnia stabilnej kontroli losowości.
+        </div>
+
+        <div id="status" class="status">Status: gotowy</div>
+    </aside>
+
+    <main class="chat">
+        <div id="log" class="log"></div>
+
+        <div class="composer">
+            <div class="composer-inner">
+                <textarea id="input" placeholder="Napisz wiadomość…"></textarea>
+                <button id="sendBtn" class="primary" type="button">
+                    <span class="btn-text">Wyślij</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const els = {
+        baseUrl: document.getElementById('baseUrl'),
+        token: document.getElementById('token'),
+        rememberToken: document.getElementById('rememberToken'),
+        model: document.getElementById('model'),
+        refreshModelsBtn: document.getElementById('refreshModelsBtn'),
+        clearChatBtn: document.getElementById('clearChatBtn'),
+        status: document.getElementById('status'),
+        log: document.getElementById('log'),
+        input: document.getElementById('input'),
+        sendBtn: document.getElementById('sendBtn'),
+    };
+
+    /** In-memory conversation in OpenAI-ish shape */
+    let messages = [];
+
+    function nowTime() {
+        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function setStatus(text) {
+        els.status.textContent = 'Status: ' + text;
+    }
+
+    function escapeHtml(s) {
+        return String(s ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function addMessage(role, content) {
+        const msg = { role, content: String(content ?? '') };
+        messages.push(msg);
+
+        const div = document.createElement('div');
+        div.className = 'msg ' + (role === 'user' ? 'user' : role === 'assistant' ? 'assistant' : 'system');
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = '<span class="role">' + escapeHtml(role) + '</span>' +
+            '<span class="time">' + escapeHtml(nowTime()) + '</span>';
+
+        const body = document.createElement('div');
+        body.className = 'body';
+        body.innerHTML = escapeHtml(msg.content);
+
+        div.appendChild(meta);
+        div.appendChild(body);
+        els.log.appendChild(div);
+
+        // autoscroll
+        els.log.scrollTop = els.log.scrollHeight;
+    }
+
+    function resetChat() {
+        messages = [];
+        els.log.innerHTML = '';
+        addMessage('system', 'Gotowe. Podaj token, wybierz model i pisz.');
+    }
+
+    function getAuthHeaders() {
+        const token = (els.token.value || '').trim();
+        if (!token) return null;
+        return { 'Authorization': 'Bearer ' + token };
+    }
+
+    async function fetchJson(url, opts) {
+        const res = await fetch(url, opts);
+        const text = await res.text();
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; } catch (_) {}
+        return { res, text, json };
+    }
+
+    async function refreshModels() {
+        const baseUrl = els.baseUrl.value.replace(/\/+$/, '');
+        const auth = getAuthHeaders();
+        if (!auth) {
+            setStatus('brak tokena');
+            addMessage('system', 'Brak tokena. Wklej token w panelu po lewej.');
+            return;
+        }
+
+        setStatus('pobieram modele…');
+        els.refreshModelsBtn.disabled = true;
+
+        try {
+            const { res, json, text } = await fetchJson(baseUrl + '/v1/models', {
+                method: 'GET',
+                headers: { ...auth }
+            });
+
+            if (!res.ok) {
+                const msg = json?.error?.message || text || ('HTTP ' + res.status);
+                throw new Error(msg);
+            }
+
+            const data = Array.isArray(json?.data) ? json.data : [];
+            els.model.innerHTML = '';
+
+            if (data.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '(brak modeli albo brak uprawnień)';
+                els.model.appendChild(opt);
+                setStatus('brak modeli');
+                return;
+            }
+
+            for (const m of data) {
+                const id = m?.id ? String(m.id) : '';
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = id;
+                els.model.appendChild(opt);
+            }
+
+            // wybierz pierwszy
+            els.model.value = els.model.options[0].value;
+
+            setStatus('modele załadowane (' + data.length + ')');
+        } catch (e) {
+            setStatus('błąd modeli');
+            addMessage('system', 'Nie udało się pobrać modeli: ' + (e?.message || e));
+        } finally {
+            els.refreshModelsBtn.disabled = false;
+        }
+    }
+
+    async function sendMessage() {
+        const baseUrl = els.baseUrl.value.replace(/\/+$/, '');
+        const auth = getAuthHeaders();
+        const text = (els.input.value || '').trim();
+
+        if (!text) return;
+
+        if (!auth) {
+            addMessage('system', 'Brak tokena. Wklej token w panelu po lewej.');
+            return;
+        }
+
+        const chosenModel = (els.model.value || '').trim();
+        if (!chosenModel) {
+            addMessage('system', 'Nie wybrano modelu. Kliknij „Odśwież modele”.');
+            return;
+        }
+
+        // UX: show user message immediately
+        els.input.value = '';
+        addMessage('user', text);
+
+        setSendLoading(true);
+        setStatus('wysyłam…');
+
+        try {
+            const payload = {
+                model: chosenModel,
+                stream: false,
+                messages: messages.filter(m => m.role !== 'system' || m.content) // keep as-is; you can also drop system if you want
+            };
+
+            const { res, json, text: raw } = await fetchJson(baseUrl + '/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...auth },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const msg = json?.error?.message || raw || ('HTTP ' + res.status);
+                throw new Error(msg);
+            }
+
+            const content =
+                json?.choices?.[0]?.message?.content ??
+                json?.choices?.[0]?.text ??
+                '';
+
+            addMessage('assistant', String(content ?? ''));
+            setStatus('gotowy');
+        } catch (e) {
+            setStatus('błąd');
+            addMessage('system', 'Błąd backendu: ' + (e?.message || e));
+        } finally {
+            setSendLoading(false);
+        }
+    }
+
+    function setSendLoading(isLoading) {
+        els.sendBtn.disabled = isLoading;
+        els.sendBtn.classList.toggle('is-loading', isLoading);
+
+        const label = els.sendBtn.querySelector('.btn-text');
+        if (label) label.textContent = isLoading ? 'Wysyłam…' : 'Wyślij';
+    }
+
+    // Remember token (optional)
+    const LS_KEY = 'copilot_proxy_token';
+    const LS_REMEMBER = 'copilot_proxy_remember';
+
+    (function initRemember() {
+        const remember = localStorage.getItem(LS_REMEMBER) === '1';
+        els.rememberToken.checked = remember;
+
+        if (remember) {
+            const tok = localStorage.getItem(LS_KEY) || '';
+            els.token.value = tok;
+        }
+
+        els.rememberToken.addEventListener('change', () => {
+            localStorage.setItem(LS_REMEMBER, els.rememberToken.checked ? '1' : '0');
+            if (!els.rememberToken.checked) localStorage.removeItem(LS_KEY);
+            if (els.rememberToken.checked) localStorage.setItem(LS_KEY, els.token.value || '');
+        });
+
+        els.token.addEventListener('input', () => {
+            if (els.rememberToken.checked) {
+                localStorage.setItem(LS_KEY, els.token.value || '');
+            }
+        });
+    })();
+
+    // Events
+    els.refreshModelsBtn.addEventListener('click', refreshModels);
+    els.clearChatBtn.addEventListener('click', resetChat);
+    els.sendBtn.addEventListener('click', sendMessage);
+
+    els.input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            // Enter sends; Shift+Enter newline
+            e.preventDefault();
+            sendMessage();
+        } else if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Boot
+    resetChat();
+</script>
+</body>
+</html>
