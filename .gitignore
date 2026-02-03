@@ -29,6 +29,7 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 docker/node-copilot-sdk/node_modules/
+node-copilot-sdk/node_modules/
 
 ### VS Code ###
 .vscode/
